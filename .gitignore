@@ -1,0 +1,25 @@
+# IDE
+.vscode/
+.idea/
+
+# Java
+target/
+*.class
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node
+node_modules/
+dist/
+
+# Env
+.env
+application-local.yml
+
+# System
+.DS_Store
+Thumbs.db
