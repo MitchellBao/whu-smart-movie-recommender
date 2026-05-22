@@ -1,185 +1,124 @@
 # WHU Smart Movie Recommender
 
-## 一、项目简介
+面向大规模用户行为数据的智能电影推荐系统。项目来自武汉大学《计算机综合项目实践》课程，目标是实现一个结合传统推荐算法、大语言模型解释能力和 Web 工程实践的电影推荐系统。
 
-本项目是武汉大学《计算机综合项目实践》课程项目，项目名称为：
+## 项目简介
 
-**面向大规模用户行为数据的智能电影推荐系统设计与实现**
+本系统围绕“推荐什么”和“为什么推荐”两个问题展开：
 
-项目目标是设计并实现一个基于用户行为数据的智能电影推荐系统。系统以 MovieLens 等电影评分数据为基础，通过协同过滤、矩阵分解等推荐算法生成个性化电影推荐结果，并结合大语言模型生成自然语言推荐理由，使推荐结果不仅能够展示“推荐什么”，也能够解释“为什么推荐”。
+- 推荐算法服务负责根据用户评分和电影信息计算 Top-N 推荐结果。
+- Spring Boot 后端负责业务编排、数据库访问、算法服务调用和 LLM 推荐理由生成。
+- Vue 前端负责页面展示、用户交互和推荐结果呈现。
+- MySQL 负责存储用户、电影、评分和推荐解释等数据。
 
-本项目不是单纯的电影信息展示网站，而是一个结合 **传统推荐算法 + 大语言模型语义解释 + Web 系统工程实践** 的综合性软件系统。
+项目的核心设计思想是：推荐算法负责数值计算与排序，大语言模型作为语义增强层负责生成自然语言解释，不直接替代推荐算法。
 
----
-
-## 二、项目背景
-
-在传统推荐系统中，系统通常只返回推荐列表或预测评分，用户很难理解推荐结果背后的原因。随着大语言模型的发展，推荐系统可以在原有数值计算结果的基础上进一步生成自然语言解释，从而提升推荐结果的可理解性和交互体验。
-
-本项目围绕电影推荐场景，尝试将传统推荐算法与大语言模型能力结合起来：
-
-- 推荐算法负责计算用户可能感兴趣的电影；
-- 后端服务负责业务逻辑、数据访问和服务调度；
-- 大语言模型负责根据用户画像、电影信息和算法评分生成推荐理由；
-- 前端负责推荐结果、推荐解释和统计信息的展示。
-
-项目在架构上强调“推荐计算”和“语义解释”的职责分离。传统算法负责核心推荐任务，大语言模型作为语义增强层，不直接替代推荐算法。该设计可以避免系统偏离推荐系统主线，同时保留智能化交互特色。
-
----
-
-## 三、主要功能
-
-### 1. 用户功能
-
-- 用户注册与登录
-- 浏览电影信息
-- 查看电影类型、标题等基本信息
-- 对电影进行评分
-- 获取个性化电影推荐结果
-- 查看推荐理由
-- 通过自然语言方式进行简单查询或交互
-
-### 2. 推荐功能
-
-- 基于用户历史评分生成推荐结果
-- 支持基于用户的协同过滤
-- 支持基于物品的协同过滤
-- 支持 SVD 矩阵分解推荐模型
-- 返回 Top-N 推荐电影列表
-- 返回预测评分或推荐得分
-
-### 3. 智能解释功能
-
-- 根据用户偏好生成推荐理由
-- 根据电影类型、标题、评分等信息生成自然语言解释
-- 将推荐理由保存到数据库中，便于前端展示
-- 支持后续接入不同大语言模型服务
-
-### 4. 管理与展示功能
-
-- 电影数据管理
-- 用户评分数据管理
-- 推荐结果缓存
-- 推荐结果可视化展示
-- 用户行为统计展示
-
----
-
-## 四、技术栈
-
-| 模块 | 技术 |
-|---|---|
-| 前端 | Vue.js / Vite |
-| 后端 | Spring Boot |
-| 推荐算法服务 | Python / Flask |
-| 数据库 | MySQL |
-| 数据处理 | pandas / numpy / scikit-learn |
-| 可视化 | ECharts |
-| 大语言模型接口 | 通义千问 API / OpenAI 兼容 API / 其他 LLM API |
-| 项目管理 | Git / GitHub |
-| 开发环境 | Windows + VS Code |
-
----
-
-## 五、系统架构
-
-系统采用前后端分离与分层解耦的设计思路，整体划分为四层：
-
-```text
-应用层 frontend
-    ↓
-服务层 backend
-    ↓
-算法层 algorithm
-    ↓
-数据层 database
-```
-
-### 1. 应用层
-
-应用层主要由 Vue.js 实现，负责用户交互与页面展示，包括电影列表、推荐结果、推荐理由、用户评分界面和可视化统计页面。
-
-### 2. 服务层
-
-服务层由 Spring Boot 实现，负责处理前端请求、用户管理、评分管理、数据库访问、推荐服务调用和大语言模型 API 调用。
-
-### 3. 算法层
-
-算法层由 Python 实现，主要负责推荐算法计算，包括数据预处理、评分矩阵构建、协同过滤和矩阵分解等任务。
-
-### 4. 数据层
-
-数据层由 MySQL 实现，用于存储用户信息、电影信息、评分信息、标签信息、推荐结果和推荐理由。
-
----
-
-## 六、核心流程
-
-### 推荐生成与解释流程
-
-```text
-1. 用户在前端发起推荐请求
-2. Spring Boot 后端接收请求
-3. 后端读取用户历史评分和电影信息
-4. 后端调用 Python 推荐算法服务
-5. Python 服务返回 Top-N 推荐电影及预测评分
-6. 后端组装 Prompt
-7. 后端调用大语言模型 API
-8. 大语言模型生成推荐理由
-9. 后端将推荐结果与推荐理由写入数据库
-10. 前端展示电影推荐列表和自然语言解释
-```
-
-该流程对应项目中“计算结果 + 语义表达”的核心设计。Python 算法服务负责数值计算，Spring Boot 负责服务编排与 Prompt 组装，LLM 负责推荐理由生成，前端负责最终展示。已有阶段总结中也明确将 LLM 定位为语义增强层，而不是核心推荐算法的替代者。:contentReference[oaicite:1]{index=1}
-
----
-
-## 七、项目目录结构
+## 当前仓库结构
 
 ```text
 whu-smart-movie-recommender/
 ├── README.md
-├── frontend/
-│   ├── package.json
-│   ├── index.html
-│   └── src/
-│       ├── App.vue
-│       └── main.js
-├── backend/
-│   ├── pom.xml
-│   └── src/
-│       └── main/
-│           ├── java/
-│           └── resources/
-├── algorithm/
-│   ├── app.py
-│   ├── requirements.txt
-│   └── recommender/
-├── database/
-│   └── schema.sql
-├── docs/
+├── frontend/                 # Vue / Vite 前端
+├── backend/                  # Spring Boot 后端服务
+├── algorithm-service/        # Python FastAPI 推荐算法服务
+├── deploy/
+│   ├── scripts/              # 本地启动、停止、测试脚本
+│   └── baota/                # 宝塔部署相关文件
+├── docs/                     # 项目文档
 │   ├── 01-topic-and-team.md
 │   ├── 02-requirements-draft.md
 │   ├── architecture.md
-│   └── api-draft.md
-└── deploy/
-    └── docker-compose.yml
+│   ├── api-draft.md
+│   └── stage-summaries/
+└── .github/                  # GitHub 工作流配置
 ```
 
----
+说明：旧版 `algorithm/` 和 `database/` 目录已经不再作为当前主结构使用。当前算法服务目录是 `algorithm-service/`，数据库表结构由后端 JPA 与初始化数据共同维护。
 
-## 八、快速启动
+## 技术栈
 
-### 1. 克隆项目
+| 模块 | 技术 |
+|---|---|
+| 前端 | Vue 3 / Vite |
+| 后端 | Spring Boot / Maven / JPA |
+| 算法服务 | Python / FastAPI / Uvicorn / pandas / numpy |
+| 数据库 | MySQL 8 |
+| 智能解释 | OpenAI 兼容格式 LLM API，可离线降级 |
+| 本地开发 | Windows / VS Code / PowerShell |
+
+## 核心功能
+
+- 获取个性化电影推荐结果。
+- 提交用户电影评分。
+- 后端调用 Python 算法服务完成推荐计算。
+- 根据推荐结果生成自然语言推荐理由。
+- 未配置 LLM 密钥时，系统可使用离线默认解释继续运行。
+- 提供本地全栈启动、停止和测试脚本。
+
+## 团队分工
+
+| 成员 | 角色 | 主要职责 |
+|---|---|---|
+| 鲍明颉 | 组长 / Scrum Master / 系统架构负责人 | 项目统筹、总体架构设计、技术路线把控、接口规范、数据库关键字段设计、LLM 语义增强定位、文档统筹 |
+| 杨舸 | 核心算法、后端与部署实现负责人 | Python 推荐算法服务、Spring Boot 后端 MVP、数据库联调、本地启动脚本、部署脚本和全栈测试链路 |
+| 伍锡飞 | 前端实现与测试负责人 | Vue 前端页面、推荐结果展示、交互体验和系统测试 |
+
+## 本地运行前准备
+
+建议使用 VS Code 打开项目根目录：
 
 ```powershell
-git clone https://github.com/MitchellBao/whu-smart-movie-recommender.git
-cd whu-smart-movie-recommender
+cd F:\Projects\whu-smart-movie-recommender
+code .
 ```
 
----
+需要提前准备：
 
-### 2. 启动前端
+- JDK 21
+- Python 3.10 或更高版本
+- Node.js 20 或更高版本
+- MySQL 8
+- VS Code PowerShell 终端
+
+数据库默认配置见 [backend/src/main/resources/application.yml](backend/src/main/resources/application.yml)：
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/movie_recommender
+    username: root
+    password: root
+```
+
+如果你的 MySQL 密码不是 `root`，请在 `backend/.env` 或当前 PowerShell 环境中设置对应变量，不要把密码提交到 GitHub。
+
+## 一键启动后端与算法服务
+
+在项目根目录执行：
+
+```powershell
+.\deploy\scripts\start-local-fullstack.ps1 -InstallDeps
+```
+
+脚本会自动完成：
+
+1. 准备 `algorithm-service/.venv` Python 虚拟环境。
+2. 安装算法服务依赖。
+3. 启动 Python FastAPI 算法服务。
+4. 启动 Spring Boot 后端服务。
+5. 等待健康检查通过。
+
+启动成功后会看到类似输出：
+
+```text
+Algorithm health: http://127.0.0.1:8000/api/python/health
+Backend API:      http://127.0.0.1:8080/api/recommend/movie?userId=1&topN=3
+Stop command:     .\deploy\scripts\stop-local-fullstack.ps1
+```
+
+## 启动前端
+
+另开一个 VS Code 终端：
 
 ```powershell
 cd frontend
@@ -193,273 +132,121 @@ npm run dev
 http://localhost:5173/
 ```
 
----
+## 手动接口测试
 
-### 3. 启动 Python 推荐算法服务
+推荐使用 `curl.exe`，不要用 PowerShell 的 `curl` 别名。
 
-```powershell
-cd algorithm
-python -m venv .venv
-.\.venv\Scripts\activate
-pip install -r requirements.txt
-python app.py
-```
-
-测试地址：
-
-```text
-http://127.0.0.1:5000/
-http://127.0.0.1:5000/recommend/1
-```
-
-示例返回：
-
-```json
-{
-  "user_id": 1,
-  "recommendations": [
-    {
-      "movie_id": 1,
-      "title": "Toy Story",
-      "score": 4.8
-    },
-    {
-      "movie_id": 2,
-      "title": "Jumanji",
-      "score": 4.6
-    }
-  ]
-}
-```
-
----
-
-### 4. 启动后端
-
-进入后端目录：
+### 1. 检查算法服务
 
 ```powershell
-cd backend
+curl.exe http://127.0.0.1:8000/api/python/health
 ```
 
-使用 Maven 启动：
+预期结果：
+
+```json
+{"status":"ok"}
+```
+
+### 2. 获取推荐结果
 
 ```powershell
-.\mvnw spring-boot:run
+curl.exe "http://127.0.0.1:8080/api/recommend/movie?userId=1&topN=3"
 ```
 
-健康检查接口：
+预期结果：返回 `code: 0` 和推荐电影列表。
+
+### 3. 提交评分
+
+PowerShell 中建议用 `Invoke-RestMethod`，避免 JSON 转义问题：
+
+```powershell
+$body = @{
+  userId = 1
+  movieId = 1
+  score = 4.5
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:8080/api/rating/submit" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body $body
+```
+
+### 4. 测试自然语言查询
+
+```powershell
+$body = @{
+  userId = 1
+  queryText = "推荐一部烧脑科幻片"
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:8080/api/llm/query" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body $body
+```
+
+如果没有配置 LLM 密钥，系统会返回离线模式的默认解释。
+
+## 一键测试
+
+服务启动后执行：
+
+```powershell
+.\deploy\scripts\test-local-fullstack.ps1
+```
+
+该脚本主要测试：
+
+- MySQL 是否可连接。
+- Python 算法服务健康检查是否通过。
+- 后端推荐接口是否能返回数据。
+- 评分提交接口是否可用。
+- 提交评分后推荐接口是否仍可用。
+- LLM 查询接口是否能返回结果。
+
+如果希望脚本自动尝试启动服务：
+
+```powershell
+.\deploy\scripts\test-local-fullstack.ps1 -AutoStart
+```
+
+## 停止本地服务
+
+```powershell
+.\deploy\scripts\stop-local-fullstack.ps1
+```
+
+日志位置：
 
 ```text
-http://localhost:8080/api/health
+.local-run/logs/algorithm.log
+.local-run/logs/backend.log
 ```
 
-预期返回：
+## 常用接口
 
-```text
-backend is running
-```
-
----
-
-### 5. 初始化数据库
-
-进入 MySQL 后执行：
-
-```sql
-source database/schema.sql;
-```
-
-或者复制 `database/schema.sql` 中的 SQL 语句到 MySQL Workbench / DataGrip / VS Code 数据库插件中执行。
-
----
-
-## 九、数据库设计概要
-
-系统初步包含以下数据表：
-
-| 表名 | 说明 |
-|---|---|
-| users | 用户信息表 |
-| movies | 电影信息表 |
-| ratings | 用户评分表 |
-| tags | 电影标签表 |
-| recommendations | 推荐结果表 |
-
-其中，`recommendations` 表中设置了 `reason` 字段，用于保存大语言模型生成的推荐理由。该字段是本项目区别于普通推荐系统的重要设计之一，用于打通“算法结果 → LLM 解释 → 前端展示”的数据链路。
-
----
-
-## 十、API 草案
-
-### 1. 健康检查
-
-```http
-GET /api/health
-```
-
-返回：
-
-```text
-backend is running
-```
-
----
-
-### 2. 获取电影列表
-
-```http
-GET /api/movies
-```
-
----
-
-### 3. 提交用户评分
-
-```http
-POST /api/ratings
-```
-
-请求体示例：
-
-```json
-{
-  "userId": 1,
-  "movieId": 10,
-  "rating": 4.5
-}
-```
-
----
-
-### 4. 获取推荐结果
-
-```http
-GET /api/recommendations/{userId}
-```
-
-返回示例：
-
-```json
-{
-  "userId": 1,
-  "recommendations": [
-    {
-      "movieId": 1,
-      "title": "Toy Story",
-      "predictedScore": 4.8,
-      "reason": "该电影与用户过往偏好的动画和冒险类型较为接近。"
-    }
-  ]
-}
-```
-
----
-
-### 5. 调用 Python 推荐服务
-
-```http
-GET http://127.0.0.1:5000/recommend/{userId}
-```
-
----
-
-### 6. 生成推荐理由
-
-```http
-POST /api/llm/explain
-```
-
-请求体示例：
-
-```json
-{
-  "userId": 1,
-  "movieId": 1,
-  "title": "Toy Story",
-  "genres": "Animation|Children|Comedy",
-  "predictedScore": 4.8
-}
-```
-
----
-
-## 十一、当前开发进度
-
-### 第一阶段：项目初始化与工程骨架
-
-- [x] 创建 GitHub 仓库
-- [x] 初始化前端 Vue 项目
-- [ ] 初始化 Spring Boot 后端项目
-- [ ] 初始化 Python 推荐算法服务
-- [ ] 创建数据库初版表结构
-- [ ] 编写项目 README
-- [ ] 编写 docs 文档草稿
-
-### 第二阶段：需求分析与系统设计
-
-- [ ] 完成需求规格说明书
-- [ ] 完成系统设计说明书
-- [ ] 完成数据库详细设计
-- [ ] 完成 API 接口设计
-- [ ] 完成推荐流程设计
-
-### 第三阶段：核心功能开发
-
-- [ ] 完成 MovieLens 数据导入
-- [ ] 完成基础电影列表接口
-- [ ] 完成评分接口
-- [ ] 完成协同过滤推荐算法
-- [ ] 完成后端调用 Python 算法服务
-- [ ] 完成推荐结果展示页面
-
-### 第四阶段：智能解释与系统集成
-
-- [ ] 接入大语言模型 API
-- [ ] 完成推荐理由生成
-- [ ] 完成推荐理由入库
-- [ ] 完成前后端联调
-- [ ] 完成基础测试
-
-### 第五阶段：答辩与报告整理
-
-- [ ] 完成最终项目实践报告
-- [ ] 完成项目演示
-- [ ] 完成答辩 PPT
-- [ ] 整理 GitHub 提交记录
-
----
-
-## 十二、团队分工
-
-| 成员 | 角色 | 主要职责 |
+| 功能 | 方法 | 地址 |
 |---|---|---|
-| 鲍明颉 | 组长 / Scrum Master / 系统架构负责人 | 项目统筹、总体架构设计、技术路线把控、接口规范、数据库关键字段设计、LLM 语义增强定位、文档统筹 |
-| 杨舸 | 核心算法、后端与部署实现 | 推荐算法服务、Spring Boot 后端 MVP、数据库联调、部署脚本和本地全栈测试链路实现 |
-| 伍锡飞 | 前端与测试 | Vue 前端页面、推荐结果展示、系统测试 |
+| 算法服务健康检查 | GET | `http://127.0.0.1:8000/api/python/health` |
+| 获取电影推荐 | GET | `http://127.0.0.1:8080/api/recommend/movie?userId=1&topN=3` |
+| 提交评分 | POST | `http://127.0.0.1:8080/api/rating/submit` |
+| LLM 自然语言查询 | POST | `http://127.0.0.1:8080/api/llm/query` |
 
-课程要求团队完成架构设计、软件分析、开发、测试、部署和运维等角色工作，并通过 Git 查看代码与文档贡献，因此项目将持续通过 GitHub 管理开发记录。:contentReference[oaicite:2]{index=2}
+## 文档
 
----
+- [选题及团队组建报告](docs/01-topic-and-team.md)
+- [项目需求规格说明书](docs/02-requirements-draft.md)
+- [系统设计说明书](docs/architecture.md)
+- [API 草案](docs/api-draft.md)
+- [第一阶段个人工作总结](docs/stage-summaries/phase1-personal-work-summary.md)
 
-## 十三、开发规范
+## Git 协作建议
 
-### 1. Git 提交规范
-
-建议提交信息采用英文动词开头：
-
-```text
-init vue frontend
-init spring boot backend
-init python recommendation service
-add database schema
-add api draft
-update project readme
-```
-
-### 2. 分支规范
-
-第一阶段可以先使用 `main` 分支。后续功能增多后，可拆分为：
+当前 `main` 分支保存稳定版本。后续建议逐步采用：
 
 ```text
 main
@@ -467,35 +254,16 @@ dev
 feature/frontend
 feature/backend
 feature/algorithm
+feature/docs
 ```
 
-### 3. 代码规范
+开发流程建议：
 
-- 前端组件命名清晰，页面与组件分离；
-- 后端接口路径统一以 `/api` 开头；
-- Python 算法服务返回统一 JSON 格式；
-- 数据库字段命名使用小写字母和下划线；
-- 不将 `.env`、虚拟环境、`node_modules`、编译产物提交到 GitHub。
+1. 从 `dev` 新建功能分支。
+2. 功能完成后提交 Pull Request。
+3. 代码审查通过后合并。
+4. 阶段性可运行版本打 tag，例如 `v0.1.0-mvp`。
 
----
+## 项目状态
 
-## 十四、后续计划
-
-后续开发将优先完成以下内容：
-
-1. 完成 Spring Boot 后端健康检查接口；
-2. 完成 Python 推荐算法服务假数据接口；
-3. 完成 MySQL 数据库初版建表；
-4. 导入 MovieLens 数据集；
-5. 实现基础电影查询与评分接口；
-6. 实现基础协同过滤推荐算法；
-7. 完成后端与算法服务联调；
-8. 接入大语言模型生成推荐理由；
-9. 完成前端推荐结果展示页面；
-10. 整理项目报告与答辩材料。
-
----
-
-## 十五、项目说明
-
-本项目当前处于课程实践早期阶段，主要目标是完成系统工程骨架搭建、技术路线验证和核心模块接口设计。后续将逐步补充完整推荐算法、数据库导入、前后端联调和大语言模型推荐解释功能。
+当前版本已经合并算法服务、后端服务、部署脚本和文档整理内容，支持本地启动算法服务与后端服务，并可进行基础推荐、评分提交和 LLM 查询链路测试。前端仍保留原有 Vue 工程结构，后续可继续与后端接口联调。
