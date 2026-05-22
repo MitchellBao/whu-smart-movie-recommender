@@ -1,8 +1,38 @@
-# Local environment secrets
+# IDE
+.vscode/
+.idea/
+
+# Java
+target/
+backend/target/
+*.class
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+algorithm/.venv/
+algorithm-service/.venv/
+algorithm-service/__pycache__/
+algorithm-service/app/__pycache__/
+
+# Node
+node_modules/
+frontend/node_modules/
+dist/
+frontend/dist/
+
+# Local runtime files
+.local-run/
+logs/
+
+# Env
+.env
 backend/.env
 algorithm-service/.env
+application-local.yml
 
-# Build outputs
-backend/target/
-algorithm-service/__pycache__/
-algorithm-service/.venv/
+# System
+.DS_Store
+Thumbs.db
