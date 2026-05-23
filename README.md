@@ -94,6 +94,8 @@ spring:
 
 ## 一键启动后端与算法服务
 
+首次运行推荐主链路前，请先导入 MovieLens 数据，见下一节。
+
 在项目根目录执行：
 
 ```powershell
@@ -115,6 +117,43 @@ Algorithm health: http://127.0.0.1:8000/api/python/health
 Backend API:      http://127.0.0.1:8080/api/recommend/movie?userId=1&topN=3
 Stop command:     .\deploy\scripts\stop-local-fullstack.ps1
 ```
+
+## 导入 MovieLens 数据
+
+当前算法服务采用方案 B：直接从 MySQL `ratings` 表读取评分数据进行推荐计算。因此需要先把 MovieLens 的 `movies.csv` 和 `ratings.csv` 导入 MySQL。
+
+### 1. 下载 MovieLens small
+
+```powershell
+.\deploy\scripts\download-movielens-small.ps1
+```
+
+下载后文件会放在：
+
+```text
+data/movielens/
+```
+
+该目录已加入 `.gitignore`，数据集不会提交到 GitHub。
+
+### 2. 导入 MySQL
+
+确认 `backend/.env` 中的 MySQL 配置正确后执行：
+
+```powershell
+.\deploy\scripts\import-movielens-mysql.ps1
+```
+
+脚本会自动完成：
+
+1. 创建或复用 `movie_recommender` 数据库。
+2. 创建 `users`、`movies`、`ratings`、`recommendations` 表。
+3. 根据 `ratings.csv` 自动生成测试用户。
+4. 导入 `movies.csv` 到 `movies` 表。
+5. 导入 `ratings.csv` 到 `ratings` 表。
+6. 清空旧的 `recommendations` 推荐缓存。
+
+导入完成后，后端推荐接口返回的 `title` 和 `genres` 会来自 MySQL 的 MovieLens 电影数据，算法服务的推荐计算会来自 MySQL 的 MovieLens 评分数据。
 
 ## 启动前端
 
@@ -196,7 +235,7 @@ Invoke-RestMethod `
 服务启动后执行：
 
 ```powershell
-.\deploy\scripts\test-local-fullstack.ps1
+.\deploy\scripts\test-local-fullstack.ps1 -SkipLlmCheck
 ```
 
 该脚本主要测试：
@@ -206,12 +245,12 @@ Invoke-RestMethod `
 - 后端推荐接口是否能返回数据。
 - 评分提交接口是否可用。
 - 提交评分后推荐接口是否仍可用。
-- LLM 查询接口是否能返回结果。
+- 不检查 LLM 时，重点验证 MySQL、算法服务、推荐接口和评分接口主链路。
 
 如果希望脚本自动尝试启动服务：
 
 ```powershell
-.\deploy\scripts\test-local-fullstack.ps1 -AutoStart
+.\deploy\scripts\test-local-fullstack.ps1 -AutoStart -SkipLlmCheck
 ```
 
 ## 停止本地服务

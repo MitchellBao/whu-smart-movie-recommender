@@ -26,6 +26,7 @@ frontend/dist/
 # Local runtime files
 .local-run/
 logs/
+data/movielens/
 
 # Env
 .env

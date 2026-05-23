@@ -38,7 +38,7 @@ public class RecommendationService {
     @Transactional
     public List<RecommendationItem> getRecommendationByUserId(Integer userId, Integer topN) {
         List<Recommendation> existing = recommendationRepository.findByUserIdOrderByPredictedScoreDesc(userId);
-        if (existing.isEmpty()) {
+        if (existing.size() < topN) {
             refreshRecommendation(userId, topN);
             existing = recommendationRepository.findByUserIdOrderByPredictedScoreDesc(userId);
         }

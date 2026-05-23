@@ -81,20 +81,19 @@ if (Test-PortListening -Port 8080) {
 }
 
 Write-Host "[1/5] Preparing Python runtime..."
-$pythonCmd = Get-Command python -ErrorAction SilentlyContinue
-$pythonExe = $null
-if ($pythonCmd) {
-    $pythonExe = $pythonCmd.Source
-}
-if (-not $pythonExe) {
-    throw "Python not found in PATH."
-}
-
 $venvDir = Join-Path $algorithmDir ".venv"
 $venvPython = Join-Path $venvDir "Scripts\python.exe"
 $venvUvicorn = Join-Path $venvDir "Scripts\uvicorn.exe"
 
 if (!(Test-Path $venvPython)) {
+    $pythonCmd = Get-Command python -ErrorAction SilentlyContinue
+    $pythonExe = $null
+    if ($pythonCmd) {
+        $pythonExe = $pythonCmd.Source
+    }
+    if (-not $pythonExe) {
+        throw "Python not found in PATH and virtual environment does not exist."
+    }
     & $pythonExe -m venv $venvDir
 }
 
