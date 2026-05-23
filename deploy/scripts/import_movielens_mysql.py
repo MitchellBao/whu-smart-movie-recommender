@@ -162,10 +162,14 @@ def import_dataset(connection, database: str, movies_path: Path, ratings_path: P
 
     with connection.cursor() as cursor:
         cursor.execute(f"USE `{database}`")
-        cursor.execute("DELETE FROM recommendations")
-        cursor.execute("DELETE FROM ratings")
-        cursor.execute("DELETE FROM movies")
-        cursor.execute("DELETE FROM users")
+        cursor.execute("SET FOREIGN_KEY_CHECKS = 0")
+        try:
+            cursor.execute("TRUNCATE TABLE recommendations")
+            cursor.execute("TRUNCATE TABLE ratings")
+            cursor.execute("TRUNCATE TABLE movies")
+            cursor.execute("TRUNCATE TABLE users")
+        finally:
+            cursor.execute("SET FOREIGN_KEY_CHECKS = 1")
 
         for batch in chunks(user_rows):
             cursor.executemany(
