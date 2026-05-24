@@ -4,6 +4,9 @@ param(
     [double]$Score = 4.5,
     [int]$TopN = 5,
     [int[]]$RecommendUserIds = @(1, 2, 10),
+    [string]$AuthUsername = "",
+    [string]$AuthPassword = "test123456",
+    [string]$MovieKeyword = "Matrix",
     [string]$LlmQuery = "推荐一部烧脑科幻片",
     [switch]$AutoStart,
     [switch]$SkipMysqlCheck,
@@ -86,6 +89,10 @@ function Assert-RecommendResponse {
 Write-Host "== Local Fullstack Test =="
 Write-Host "target userId=$UserId movieId=$MovieId score=$Score topN=$TopN"
 
+if ([string]::IsNullOrWhiteSpace($AuthUsername)) {
+    $AuthUsername = "test_user_$([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())"
+}
+
 if ($AutoStart) {
     Write-Host "[INFO] AutoStart enabled. Ensuring services are running..."
     $algorithmUp = Test-Endpoint -Url "http://127.0.0.1:8000/api/python/health"
@@ -136,6 +143,35 @@ Invoke-Test -Name "Recommend API stable for multiple users" -Action {
         $url = "http://127.0.0.1:8080/api/recommend/movie?userId=$targetUserId&topN=$TopN"
         $resp = Invoke-RestMethod -Uri $url -Method Get -TimeoutSec 20
         Assert-RecommendResponse -Response $resp -ExpectedTopN $TopN
+    }
+}
+
+Invoke-Test -Name "User register and login APIs" -Action {
+    $body = @{
+        username = $AuthUsername
+        password = $AuthPassword
+        age      = 20
+        gender   = "male"
+    } | ConvertTo-Json
+    $registerResp = Invoke-RestMethod -Uri "http://127.0.0.1:8080/api/user/register" -Method Post -ContentType "application/json" -Body $body -TimeoutSec 10
+    if ($registerResp.code -ne 0) { throw "register code != 0" }
+    if ($null -eq $registerResp.data.userId) { throw "registered userId missing" }
+
+    $loginResp = Invoke-RestMethod -Uri "http://127.0.0.1:8080/api/user/login" -Method Post -ContentType "application/json" -Body $body -TimeoutSec 10
+    if ($loginResp.code -ne 0) { throw "login code != 0" }
+    if ($loginResp.data.userId -ne $registerResp.data.userId) { throw "login userId mismatch" }
+}
+
+Invoke-Test -Name "Movie search API returns browsable movies" -Action {
+    $url = "http://127.0.0.1:8080/api/movie/search?keyword=$([uri]::EscapeDataString($MovieKeyword))&limit=5"
+    $resp = Invoke-RestMethod -Uri $url -Method Get -TimeoutSec 10
+    if ($resp.code -ne 0) { throw "code != 0" }
+    $items = @($resp.data)
+    if ($items.Count -lt 1) { throw "movie search returned empty" }
+    foreach ($item in $items) {
+        if ($null -eq $item.movieId) { throw "movieId missing" }
+        if ([string]::IsNullOrWhiteSpace($item.title)) { throw "title missing" }
+        if ([string]::IsNullOrWhiteSpace($item.genres)) { throw "genres missing" }
     }
 }
 

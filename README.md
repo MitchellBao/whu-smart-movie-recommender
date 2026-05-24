@@ -25,7 +25,7 @@ Python FastAPI 算法服务
   ↓
 Spring Boot 后端
   ↓
-Vue 前端展示推荐结果并提交评分
+Vue 前端登录用户、浏览电影、展示推荐结果并提交评分
 ```
 
 算法服务采用方案 B：直接读取 MySQL `ratings` 表进行推荐计算。后端根据算法返回的 `movieId` 查询 MySQL `movies` 表，补全 `title` 和 `genres`。
@@ -194,6 +194,9 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy\scripts\stop-local-
 
 | 功能 | 方法 | 地址 |
 |---|---|---|
+| 用户注册 | POST | `http://127.0.0.1:8080/api/user/register` |
+| 用户登录 | POST | `http://127.0.0.1:8080/api/user/login` |
+| 搜索电影 | GET | `http://127.0.0.1:8080/api/movie/search?keyword=Matrix&limit=12` |
 | 算法健康检查 | GET | `http://127.0.0.1:8000/api/python/health` |
 | 获取推荐 | GET | `http://127.0.0.1:8080/api/recommend/movie?userId=1&topN=5` |
 | 提交评分 | POST | `http://127.0.0.1:8080/api/rating/submit` |
@@ -207,11 +210,18 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy\scripts\stop-local-
 - 算法服务直接读取 MySQL 评分数据
 - 后端推荐接口返回真实电影标题、类型、得分和推荐理由
 - 评分提交后刷新推荐缓存
-- Vue 前端初步联调：推荐列表展示、用户 ID / topN 输入、评分提交并刷新推荐
+- Vue 前端初步联调：注册/登录、推荐列表展示、电影搜索浏览、点选电影评分并刷新推荐
 - 本地全栈测试脚本增强
+
+当前用户模块说明：
+
+- 注册和登录信息保存在 MySQL `users` 表。
+- 前端登录后会把当前用户信息保存在浏览器 `localStorage`，刷新页面后仍能记住当前用户。
+- 当前为课程 MVP 实现，密码暂未做哈希加密，也未接入 JWT / Session 权限体系；正式生产环境需要补充安全认证机制。
+- 如果重新执行 `import-movielens-mysql.ps1`，会重置 `users`、`movies`、`ratings`、`recommendations`，因此本地测试用户会被清空。
 
 下一步：
 
-- 优化前端页面体验
 - 接入 LLM 查询界面
+- 增强用户安全认证
 - 整理测试截图、阶段总结和答辩材料

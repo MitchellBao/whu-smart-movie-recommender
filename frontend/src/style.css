@@ -30,7 +30,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -54,7 +55,8 @@ button:disabled {
   opacity: 0.58;
 }
 
-input {
+input,
+select {
   width: 100%;
   min-height: 42px;
   border: 1px solid var(--border);
@@ -138,6 +140,7 @@ h3 {
 }
 
 .toolbar,
+.auth-panel,
 .recommend-panel,
 .rating-panel {
   border: 1px solid var(--border);
@@ -148,11 +151,56 @@ h3 {
 
 .toolbar {
   display: grid;
-  grid-template-columns: minmax(140px, 180px) minmax(140px, 180px) auto;
+  grid-template-columns: minmax(140px, 180px) auto minmax(220px, 1fr);
   align-items: end;
   gap: 14px;
   padding: 16px;
   margin-bottom: 16px;
+}
+
+.auth-panel {
+  padding: 16px;
+  margin-bottom: 16px;
+}
+
+.auth-form {
+  display: grid;
+  grid-template-columns: 180px repeat(4, minmax(120px, 1fr)) auto;
+  gap: 12px;
+  align-items: end;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  overflow: hidden;
+  min-height: 42px;
+}
+
+.segmented button,
+.ghost-button {
+  border-radius: 0;
+  background: #fff;
+  color: var(--muted);
+}
+
+.segmented button.selected {
+  background: var(--accent);
+  color: #fff;
+}
+
+.ghost-button {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  min-height: 34px;
+}
+
+.toolbar-note {
+  color: var(--muted);
+  font-size: 13px;
+  align-self: center;
 }
 
 .content-grid {
@@ -255,9 +303,55 @@ h3 {
   font-size: 12px;
 }
 
+.movie-search,
 .rating-form {
   display: grid;
   gap: 12px;
+}
+
+.movie-search {
+  grid-template-columns: 1fr auto;
+  align-items: end;
+}
+
+.movie-browser {
+  display: grid;
+  gap: 8px;
+  max-height: 340px;
+  overflow: auto;
+  margin: 14px 0;
+  padding-right: 4px;
+}
+
+.browse-item {
+  display: grid;
+  gap: 4px;
+  min-height: auto;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  color: var(--text);
+  padding: 10px;
+  text-align: left;
+}
+
+.browse-item:hover,
+.browse-item.selected {
+  border-color: var(--accent);
+  background: rgba(15, 118, 110, 0.07);
+  color: var(--text);
+}
+
+.browse-item strong {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.browse-item span,
+.selected-movie {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .hint {
@@ -274,6 +368,7 @@ h3 {
   }
 
   .toolbar,
+  .auth-form,
   .content-grid {
     grid-template-columns: 1fr;
   }

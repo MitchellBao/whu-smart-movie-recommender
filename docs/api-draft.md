@@ -14,7 +14,79 @@
 
 ## 2. 前端调用后端接口
 
-### 2.1 获取推荐电影
+### 2.1 用户注册
+
+```http
+POST /api/user/register
+Content-Type: application/json
+```
+
+请求体：
+
+```json
+{
+  "username": "demo",
+  "password": "test123456",
+  "age": 20,
+  "gender": "male"
+}
+```
+
+返回示例：
+
+```json
+{
+  "code": 0,
+  "data": {
+    "userId": 611,
+    "username": "demo",
+    "age": 20,
+    "gender": "male"
+  }
+}
+```
+
+### 2.2 用户登录
+
+```http
+POST /api/user/login
+Content-Type: application/json
+```
+
+请求体：
+
+```json
+{
+  "username": "demo",
+  "password": "test123456"
+}
+```
+
+返回结构与注册接口一致。前端保存返回的 `userId`，后续推荐和评分都使用该用户编号。
+
+### 2.3 搜索电影
+
+```http
+GET /api/movie/search?keyword=Matrix&limit=12
+```
+
+返回示例：
+
+```json
+{
+  "code": 0,
+  "data": [
+    {
+      "movieId": 2571,
+      "title": "Matrix, The (1999)",
+      "releaseYear": 1999,
+      "genres": "Action|Sci-Fi|Thriller"
+    }
+  ]
+}
+```
+
+### 2.4 获取推荐电影
 
 ```http
 GET /api/recommend/movie?userId=1&topN=5
@@ -51,7 +123,7 @@ GET /api/recommend/movie?userId=1&topN=5
 - 当推荐缓存不足时刷新推荐结果。
 - 返回电影 ID、标题、类型、得分和推荐理由。
 
-### 2.2 提交用户评分
+### 2.5 提交用户评分
 
 ```http
 POST /api/rating/submit
@@ -83,7 +155,7 @@ Content-Type: application/json
 - 清理或刷新该用户的推荐缓存。
 - 支持前端提交评分后重新获取推荐结果。
 
-### 2.3 LLM 推荐问答
+### 2.6 LLM 推荐问答
 
 ```http
 POST /api/llm/query
@@ -169,6 +241,9 @@ Content-Type: application/json
 
 前端已完成初步联调：
 
+- 通过 `/api/user/register` 和 `/api/user/login` 获取当前用户 ID。
+- 通过浏览器 `localStorage` 记住当前用户。
+- 通过 `/api/movie/search` 浏览和搜索电影，避免用户手动记忆 `movieId`。
 - 通过 `/api/recommend/movie` 获取推荐列表。
 - 展示 `title`、`genres`、`score`、`reason`。
 - 通过 `/api/rating/submit` 提交评分。
