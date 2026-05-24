@@ -2,6 +2,8 @@ param(
     [int]$UserId = 1,
     [int]$MovieId = 1,
     [double]$Score = 4.5,
+    [int]$TopN = 5,
+    [int[]]$RecommendUserIds = @(1, 2, 10),
     [string]$LlmQuery = "推荐一部烧脑科幻片",
     [switch]$AutoStart,
     [switch]$SkipMysqlCheck,
@@ -53,8 +55,36 @@ function Test-Endpoint {
     }
 }
 
+function Assert-RecommendResponse {
+    param(
+        [object]$Response,
+        [int]$ExpectedTopN
+    )
+    if ($Response.code -ne 0) { throw "code != 0" }
+    if ($null -eq $Response.data) { throw "data is null" }
+
+    $items = @($Response.data)
+    if ($items.Count -lt $ExpectedTopN) {
+        throw "expected at least $ExpectedTopN recommendations, got $($items.Count)"
+    }
+
+    foreach ($item in $items | Select-Object -First $ExpectedTopN) {
+        if ($null -eq $item.movieId) { throw "movieId missing" }
+        if ([string]::IsNullOrWhiteSpace($item.title)) {
+            throw "movie title missing for movieId=$($item.movieId)"
+        }
+        if ([string]::IsNullOrWhiteSpace($item.genres)) {
+            throw "movie genres missing for movieId=$($item.movieId)"
+        }
+        if ($null -eq $item.score) { throw "score missing for movieId=$($item.movieId)" }
+        if ([string]::IsNullOrWhiteSpace($item.reason)) {
+            throw "reason missing for movieId=$($item.movieId)"
+        }
+    }
+}
+
 Write-Host "== Local Fullstack Test =="
-Write-Host "target userId=$UserId movieId=$MovieId score=$Score"
+Write-Host "target userId=$UserId movieId=$MovieId score=$Score topN=$TopN"
 
 if ($AutoStart) {
     Write-Host "[INFO] AutoStart enabled. Ensuring services are running..."
@@ -85,18 +115,28 @@ if (-not $SkipMysqlCheck) {
     }
 }
 
-Invoke-Test -Name "Algorithm health endpoint" -Action {
+Invoke-Test -Name "Algorithm health endpoint reads MovieLens ratings" -Action {
     $resp = Invoke-RestMethod -Uri "http://127.0.0.1:8000/api/python/health" -Method Get -TimeoutSec 5
     if ($resp.status -ne "ok") {
         throw "Unexpected status: $($resp.status)"
     }
+    if ($resp.ratingCount -lt 1000) {
+        throw "ratingCount too small: $($resp.ratingCount)"
+    }
 }
 
-Invoke-Test -Name "Recommend API returns data" -Action {
-    $url = "http://127.0.0.1:8080/api/recommend/movie?userId=$UserId&topN=3"
-    $resp = Invoke-RestMethod -Uri $url -Method Get -TimeoutSec 10
-    if ($resp.code -ne 0) { throw "code != 0" }
-    if ($null -eq $resp.data) { throw "data is null" }
+Invoke-Test -Name "Recommend API returns complete MovieLens data" -Action {
+    $url = "http://127.0.0.1:8080/api/recommend/movie?userId=$UserId&topN=$TopN"
+    $resp = Invoke-RestMethod -Uri $url -Method Get -TimeoutSec 20
+    Assert-RecommendResponse -Response $resp -ExpectedTopN $TopN
+}
+
+Invoke-Test -Name "Recommend API stable for multiple users" -Action {
+    foreach ($targetUserId in $RecommendUserIds) {
+        $url = "http://127.0.0.1:8080/api/recommend/movie?userId=$targetUserId&topN=$TopN"
+        $resp = Invoke-RestMethod -Uri $url -Method Get -TimeoutSec 20
+        Assert-RecommendResponse -Response $resp -ExpectedTopN $TopN
+    }
 }
 
 Invoke-Test -Name "Rating submit API" -Action {
@@ -110,10 +150,9 @@ Invoke-Test -Name "Rating submit API" -Action {
 }
 
 Invoke-Test -Name "Recommend API after rating submit" -Action {
-    $url = "http://127.0.0.1:8080/api/recommend/movie?userId=$UserId&topN=5"
-    $resp = Invoke-RestMethod -Uri $url -Method Get -TimeoutSec 10
-    if ($resp.code -ne 0) { throw "code != 0" }
-    if ($null -eq $resp.data) { throw "data is null" }
+    $url = "http://127.0.0.1:8080/api/recommend/movie?userId=$UserId&topN=$TopN"
+    $resp = Invoke-RestMethod -Uri $url -Method Get -TimeoutSec 20
+    Assert-RecommendResponse -Response $resp -ExpectedTopN $TopN
 }
 
 if (-not $SkipLlmCheck) {
