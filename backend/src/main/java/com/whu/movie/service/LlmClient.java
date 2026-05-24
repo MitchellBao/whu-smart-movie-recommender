@@ -41,7 +41,7 @@ public class LlmClient {
         String prompt = "你是一个电影推荐助手。用户是" + username
                 + "，系统推荐电影《" + movieTitle + "》，类型为" + genres
                 + "，预测评分约为" + String.format("%.2f", score)
-                + "。请用不超过100字中文口语解释推荐原因。";
+                + "。请用不超过100字的中文口语解释推荐原因。";
         return chatCompletion(prompt);
     }
 
@@ -55,7 +55,7 @@ public class LlmClient {
 
     private String chatCompletion(String prompt) {
         if (!Boolean.TRUE.equals(llmEnabled) || llmApiKey == null || llmApiKey.isBlank()) {
-            return "当前为离线模式：未启用LLM密钥，返回默认解释。";
+            return "当前为离线模式：未启用 LLM 密钥，返回默认解释。";
         }
 
         HttpHeaders headers = new HttpHeaders();
@@ -81,20 +81,20 @@ public class LlmClient {
             Map responseBody = response.getBody();
             if (responseBody == null || !responseBody.containsKey("choices")) {
                 log.warn("LLM response missing choices. baseUrl={}, model={}", llmBaseUrl, llmModel);
-                return "LLM响应为空，使用默认解释。";
+                return "LLM 响应为空，使用默认解释。";
             }
             List<Map<String, Object>> choices = (List<Map<String, Object>>) responseBody.get("choices");
             if (choices.isEmpty()) {
                 log.warn("LLM response choices empty. baseUrl={}, model={}", llmBaseUrl, llmModel);
-                return "LLM未返回候选结果，使用默认解释。";
+                return "LLM 未返回候选结果，使用默认解释。";
             }
             Map<String, Object> message = (Map<String, Object>) choices.get(0).get("message");
             if (message == null) {
                 log.warn("LLM response message null. baseUrl={}, model={}", llmBaseUrl, llmModel);
-                return "LLM内容为空，使用默认解释。";
+                return "LLM 内容为空，使用默认解释。";
             }
             Object content = message.get("content");
-            return content == null ? "LLM内容为空，使用默认解释。" : content.toString();
+            return content == null ? "LLM 内容为空，使用默认解释。" : content.toString();
         } catch (HttpStatusCodeException ex) {
             String resp = ex.getResponseBodyAsString();
             if (resp != null && resp.length() > 500) {
@@ -102,11 +102,11 @@ public class LlmClient {
             }
             log.error("LLM HTTP error. status={}, baseUrl={}, model={}, body={}",
                     ex.getStatusCode(), llmBaseUrl, llmModel, resp);
-            return "LLM调用失败，使用默认解释。";
+            return "LLM 调用失败，使用默认解释。";
         } catch (Exception ex) {
             log.error("LLM call failed. baseUrl={}, model={}, error={}",
                     llmBaseUrl, llmModel, ex.toString());
-            return "LLM调用失败，使用默认解释。";
+            return "LLM 调用失败，使用默认解释。";
         }
     }
 }

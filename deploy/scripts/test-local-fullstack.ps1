@@ -175,6 +175,16 @@ Invoke-Test -Name "Movie search API returns browsable movies" -Action {
     }
 }
 
+Invoke-Test -Name "Movie page API returns pagination metadata" -Action {
+    $url = "http://127.0.0.1:8080/api/movie/page?keyword=$([uri]::EscapeDataString($MovieKeyword))&page=1&pageSize=12"
+    $resp = Invoke-RestMethod -Uri $url -Method Get -TimeoutSec 10
+    if ($resp.code -ne 0) { throw "code != 0" }
+    if ($null -eq $resp.data.items) { throw "items missing" }
+    if ($resp.data.page -ne 1) { throw "page metadata invalid" }
+    if ($resp.data.pageSize -lt 5) { throw "pageSize metadata invalid" }
+    if ($resp.data.totalItems -lt 1) { throw "totalItems too small" }
+}
+
 Invoke-Test -Name "Rating submit API" -Action {
     $body = @{
         userId  = $UserId
