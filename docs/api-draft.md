@@ -2,26 +2,27 @@
 
 ## 1. 接口设计原则
 
-第一阶段确定系统采用前后端分离架构。前端统一调用 Spring Boot 后端接口，后端根据业务需要访问数据库、调用 Python 算法服务或调用 LLM 服务。
+系统采用前后端分离架构。前端统一调用 Spring Boot 后端接口，后端根据业务需要访问 MySQL、调用 Python 算法服务或调用 LLM 服务。
 
-接口设计遵循以下原则：
+接口设计原则：
 
 - 对前端暴露统一 `/api` 前缀。
 - 前端不直接调用 Python 算法服务。
 - Java 后端与 Python 算法服务通过 HTTP JSON 通信。
-- 返回数据尽量保持结构稳定，便于前端联调。
+- 返回结构保持稳定，便于前端联调。
+- 本地前端开发通过 Vite proxy 将 `/api` 转发到 `http://127.0.0.1:8080`。
 
 ## 2. 前端调用后端接口
 
 ### 2.1 获取推荐电影
 
 ```http
-GET /api/recommend/movie?userId=1&topN=3
+GET /api/recommend/movie?userId=1&topN=5
 ```
 
-请求参数：
+参数：
 
-| 参数 | 类型 | 是否必填 | 说明 |
+| 参数 | 类型 | 必填 | 说明 |
 |---|---|---|---|
 | userId | int | 是 | 用户编号 |
 | topN | int | 否 | 推荐数量，默认 10 |
@@ -33,10 +34,10 @@ GET /api/recommend/movie?userId=1&topN=3
   "code": 0,
   "data": [
     {
-      "movieId": 6,
-      "title": "Heat",
-      "genres": "Action|Crime|Thriller",
-      "score": 5.66919,
+      "movieId": 589,
+      "title": "Terminator 2: Judgment Day (1991)",
+      "genres": "Action|Sci-Fi",
+      "score": 7.67408,
       "reason": "当前为离线模式：未启用LLM密钥，返回默认解释。"
     }
   ]
@@ -47,7 +48,8 @@ GET /api/recommend/movie?userId=1&topN=3
 
 - 接收前端推荐请求。
 - 调用推荐业务服务。
-- 返回推荐电影列表、预测分数和推荐理由。
+- 当推荐缓存不足时刷新推荐结果。
+- 返回电影 ID、标题、类型、得分和推荐理由。
 
 ### 2.2 提交用户评分
 
@@ -77,8 +79,9 @@ Content-Type: application/json
 
 接口职责：
 
-- 保存用户评分记录。
-- 评分变化后触发推荐结果刷新。
+- 保存用户评分到 `ratings` 表。
+- 清理或刷新该用户的推荐缓存。
+- 支持前端提交评分后重新获取推荐结果。
 
 ### 2.3 LLM 推荐问答
 
@@ -96,29 +99,12 @@ Content-Type: application/json
 }
 ```
 
-返回示例：
-
-```json
-{
-  "code": 0,
-  "responseText": "当前为离线模式：未启用LLM密钥，返回默认解释。",
-  "relatedMovies": [
-    {
-      "movieId": 6,
-      "title": "Heat",
-      "genres": "Action|Crime|Thriller",
-      "score": 5.66919,
-      "reason": "当前为离线模式：未启用LLM密钥，返回默认解释。"
-    }
-  ]
-}
-```
-
 接口职责：
 
 - 接收用户自然语言查询。
 - 获取当前用户相关推荐结果。
-- 调用 LLM 客户端生成回答；未启用 LLM 时返回离线降级文案。
+- 调用 LLM 客户端生成回答。
+- 未启用 LLM 时返回离线降级文案。
 
 ## 3. 后端调用算法服务接口
 
@@ -132,13 +118,15 @@ GET /api/python/health
 
 ```json
 {
-  "status": "ok"
+  "status": "ok",
+  "ratingCount": 100836
 }
 ```
 
 接口职责：
 
-- 检查 Python 推荐算法服务是否正常运行。
+- 检查 Python 算法服务是否运行。
+- 检查算法服务是否能读取 MySQL `ratings` 表。
 
 ### 3.2 推荐计算接口
 
@@ -152,7 +140,7 @@ Content-Type: application/json
 ```json
 {
   "userId": 1,
-  "topN": 10
+  "topN": 5
 }
 ```
 
@@ -163,9 +151,9 @@ Content-Type: application/json
   "userId": 1,
   "recommendations": [
     {
-      "movieId": 6,
-      "score": 5.66919,
-      "reason": "基于相似用户偏好与矩阵分解隐语义特征生成"
+      "movieId": 589,
+      "score": 7.67408,
+      "reason": "基于 MovieLens 评分、相似用户偏好与矩阵分解隐语义特征生成"
     }
   ]
 }
@@ -173,16 +161,17 @@ Content-Type: application/json
 
 接口职责：
 
-- 根据用户编号和推荐数量计算推荐结果。
+- 从 MySQL `ratings` 表读取 MovieLens 评分数据。
+- 根据用户 ID 和推荐数量计算推荐结果。
 - 返回推荐电影编号、预测得分和算法侧推荐说明。
 
-## 4. 第一阶段接口范围
+## 4. 当前前端联调状态
 
-第一阶段接口草案覆盖推荐系统主链路所需的最小接口集合：
+前端已完成初步联调：
 
-- 推荐结果获取。
-- 用户评分提交。
-- LLM 推荐问答入口。
-- Java 后端与 Python 算法服务内部调用。
+- 通过 `/api/recommend/movie` 获取推荐列表。
+- 展示 `title`、`genres`、`score`、`reason`。
+- 通过 `/api/rating/submit` 提交评分。
+- 提交评分后自动刷新推荐列表。
 
-这些接口用于支撑工程骨架联调和系统职责边界验证。
+当前暂不直接在前端调用 Python 算法服务，也暂未完成 LLM 问答界面。
