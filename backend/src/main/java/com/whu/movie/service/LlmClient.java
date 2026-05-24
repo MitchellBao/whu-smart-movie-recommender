@@ -1,6 +1,7 @@
 package com.whu.movie.service;
 
 import com.whu.movie.dto.LlmStatusResponse;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.slf4j.Logger;
@@ -37,6 +38,12 @@ public class LlmClient {
     @Value("${llm.api.provider:deepseek}")
     private String llmProvider;
 
+    @Value("${llm.api.thinking-enabled:false}")
+    private Boolean thinkingEnabled;
+
+    @Value("${llm.api.reasoning-effort:high}")
+    private String reasoningEffort;
+
     public LlmClient(RestTemplate restTemplate) {
         this.restTemplate = restTemplate;
     }
@@ -56,7 +63,7 @@ public class LlmClient {
         String prompt = "你是一个电影推荐助手。用户是" + username
                 + "，系统推荐电影《" + movieTitle + "》，类型为" + genres
                 + "，算法推荐分约为" + String.format("%.2f", score)
-                + "。请用不超过100字的中文口语解释推荐原因。";
+                + "。请用不超过80字的中文口语解释推荐原因，避免提到你是大模型。";
         return chatCompletion(prompt);
     }
 
@@ -76,14 +83,19 @@ public class LlmClient {
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         headers.setBearerAuth(llmApiKey);
-        Map<String, Object> body = Map.of(
-                "model", llmModel,
-                "messages", List.of(
-                        Map.of("role", "system", "content", "你是一个专业、简洁的电影推荐助手。"),
-                        Map.of("role", "user", "content", prompt)
-                ),
-                "temperature", 0.5
-        );
+
+        Map<String, Object> body = new HashMap<>();
+        body.put("model", llmModel);
+        body.put("messages", List.of(
+                Map.of("role", "system", "content", "你是一个专业、简洁的电影推荐助手。"),
+                Map.of("role", "user", "content", prompt)
+        ));
+        body.put("temperature", 0.5);
+        body.put("stream", false);
+        if (Boolean.TRUE.equals(thinkingEnabled)) {
+            body.put("thinking", Map.of("type", "enabled"));
+            body.put("reasoning_effort", reasoningEffort);
+        }
 
         HttpEntity<Map<String, Object>> request = new HttpEntity<>(body, headers);
         try {

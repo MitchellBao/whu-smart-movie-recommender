@@ -49,8 +49,11 @@ ALGORITHM_SERVICE_URL=http://127.0.0.1:8000
 
 LLM_ENABLED=false
 LLM_PROVIDER=deepseek
-LLM_BASE_URL=https://api.deepseek.com/v1
-LLM_MODEL=deepseek-chat
+LLM_BASE_URL=https://api.deepseek.com
+LLM_MODEL=deepseek-v4-flash
+LLM_THINKING_ENABLED=false
+LLM_REASONING_EFFORT=high
+LLM_EXPLAIN_RECOMMENDATIONS=true
 LLM_API_KEY=change_me
 ```
 
@@ -241,10 +244,21 @@ Total: 13, Passed: 13, Failed: 0
 ```env
 LLM_ENABLED=true
 LLM_PROVIDER=deepseek
-LLM_BASE_URL=https://api.deepseek.com/v1
-LLM_MODEL=deepseek-chat
+LLM_BASE_URL=https://api.deepseek.com
+LLM_MODEL=deepseek-v4-flash
+LLM_THINKING_ENABLED=false
+LLM_REASONING_EFFORT=high
+LLM_EXPLAIN_RECOMMENDATIONS=true
 LLM_API_KEY=你的DeepSeek API Key
 ```
+
+说明：
+
+- `deepseek-v4-flash` 用于普通问答，响应更轻量。
+- 如果要使用思考模式，可改为 `LLM_MODEL=deepseek-v4-pro` 并设置 `LLM_THINKING_ENABLED=true`。
+- `LLM_EXPLAIN_RECOMMENDATIONS=true` 表示推荐结果页会调用 DeepSeek 生成推荐理由。
+- 推荐结果页会按照本次 `topN` 推荐数量尽量逐条生成 DeepSeek 理由；如果某一条调用失败，会自动退回算法解释。
+- `deepseek-chat` 和 `deepseek-reasoner` 是兼容旧模型名，不建议新项目继续作为默认配置。
 
 然后重启后端：
 

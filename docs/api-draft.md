@@ -183,8 +183,8 @@ GET /api/llm/status
   "enabled": true,
   "configured": true,
   "provider": "deepseek",
-  "model": "deepseek-chat",
-  "baseUrl": "https://api.deepseek.com/v1"
+  "model": "deepseek-v4-flash",
+  "baseUrl": "https://api.deepseek.com"
 }
 ```
 
@@ -193,6 +193,7 @@ GET /api/llm/status
 - `enabled` 表示是否开启 LLM 调用。
 - `configured` 表示是否已配置 API Key。
 - 前端根据该接口显示“DeepSeek 已启用”或“DeepSeek 离线模式”。
+- 默认模型为 `deepseek-v4-flash`；如需思考模式，可配置 `deepseek-v4-pro` 与 `LLM_THINKING_ENABLED=true`。
 
 ### 2.8 LLM 推荐问答
 

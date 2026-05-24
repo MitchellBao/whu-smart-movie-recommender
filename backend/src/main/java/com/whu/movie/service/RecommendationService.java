@@ -12,6 +12,7 @@ import jakarta.transaction.Transactional;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -22,6 +23,9 @@ public class RecommendationService {
     private final MovieRepository movieRepository;
     private final UserRepository userRepository;
     private final LlmClient llmClient;
+
+    @Value("${llm.api.explain-recommendations:false}")
+    private Boolean explainRecommendationsWithLlm;
 
     public RecommendationService(PythonAlgorithmClient pythonAlgorithmClient,
                                  RecommendationRepository recommendationRepository,
@@ -73,9 +77,12 @@ public class RecommendationService {
             recommendation.setUserId(userId);
             recommendation.setMovieId(pyItem.getMovieId());
             recommendation.setPredictedScore(pyItem.getScore());
+
             Movie movie = movieRepository.findById(pyItem.getMovieId()).orElse(null);
             String llmReason = null;
-            if (movie != null) {
+            boolean shouldExplainWithLlm = Boolean.TRUE.equals(explainRecommendationsWithLlm)
+                    && movie != null;
+            if (shouldExplainWithLlm) {
                 llmReason = llmClient.explainRecommendation(
                         username,
                         movie.getTitle(),
@@ -83,9 +90,16 @@ public class RecommendationService {
                         pyItem.getScore()
                 );
             }
-            recommendation.setReason(llmReason == null ? pyItem.getReason() : llmReason);
+
+            recommendation.setReason(isUsableLlmReason(llmReason) ? llmReason : pyItem.getReason());
             toSave.add(recommendation);
         }
         recommendationRepository.saveAll(toSave);
+    }
+
+    private boolean isUsableLlmReason(String reason) {
+        return reason != null
+                && !reason.isBlank()
+                && !reason.toLowerCase().contains("deepseek");
     }
 }

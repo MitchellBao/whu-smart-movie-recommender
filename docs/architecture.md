@@ -14,7 +14,7 @@
 数据层：MySQL movie_recommender
 ```
 
-LLM 作为外部语义增强服务，由后端统一调用，不直接参与推荐排序。当前默认接入 DeepSeek 的 OpenAI-compatible API。未配置 LLM 密钥时，后端返回离线默认解释，保证推荐主链路可运行。
+LLM 作为外部语义增强服务，由后端统一调用，不直接参与推荐排序。当前默认接入 DeepSeek 的 OpenAI-compatible API，默认模型为 `deepseek-v4-flash`。未配置 LLM 密钥时，后端返回离线默认解释，保证推荐主链路可运行。
 
 ## 2. 模块划分
 
@@ -85,6 +85,14 @@ backend/src/main/java/com/whu/movie/
 | `MovieService` | 提供电影搜索和分页浏览数据 |
 | `PythonAlgorithmClient` | 调用 Python 算法服务 |
 | `LlmClient` | 调用 DeepSeek 或返回离线默认解释 |
+
+DeepSeek 配置说明：
+
+- 默认接口地址：`https://api.deepseek.com`
+- 默认模型：`deepseek-v4-flash`
+- 如需思考模式，可使用 `deepseek-v4-pro` 并设置 `LLM_THINKING_ENABLED=true`
+- 推荐结果页可以调用 DeepSeek 生成推荐理由，解释条数跟随本次 `topN` 推荐数量；单条调用失败时退回算法解释，保证推荐列表仍可展示
+- API Key 只允许写入本地 `backend/.env` 或服务器环境变量，不提交到 Git 仓库
 
 ## 5. 算法层设计
 

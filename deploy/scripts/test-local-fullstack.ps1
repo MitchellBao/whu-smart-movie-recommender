@@ -191,7 +191,7 @@ Invoke-Test -Name "Rating submit API" -Action {
         movieId = $MovieId
         score   = $Score
     } | ConvertTo-Json
-    $resp = Invoke-RestMethod -Uri "http://127.0.0.1:8080/api/rating/submit" -Method Post -ContentType "application/json" -Body $body -TimeoutSec 10
+    $resp = Invoke-RestMethod -Uri "http://127.0.0.1:8080/api/rating/submit" -Method Post -ContentType "application/json" -Body $body -TimeoutSec 90
     if ($resp.code -ne 0) { throw "code != 0" }
 }
 
@@ -215,7 +215,7 @@ Invoke-Test -Name "Rating boundary validation rejects invalid scores" -Action {
             score   = $invalidScore
         } | ConvertTo-Json
         try {
-            $null = Invoke-RestMethod -Uri "http://127.0.0.1:8080/api/rating/submit" -Method Post -ContentType "application/json" -Body $body -TimeoutSec 10
+            $null = Invoke-RestMethod -Uri "http://127.0.0.1:8080/api/rating/submit" -Method Post -ContentType "application/json" -Body $body -TimeoutSec 30
             throw "invalid score accepted: $invalidScore"
         } catch {
             if ($_.Exception.Message -like "invalid score accepted:*") {

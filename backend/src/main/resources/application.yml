@@ -23,6 +23,9 @@ llm:
   api:
     enabled: ${LLM_ENABLED:false}
     provider: ${LLM_PROVIDER:deepseek}
-    base-url: ${LLM_BASE_URL:https://api.deepseek.com/v1}
+    base-url: ${LLM_BASE_URL:https://api.deepseek.com}
     key: ${LLM_API_KEY:}
-    model: ${LLM_MODEL:deepseek-chat}
+    model: ${LLM_MODEL:deepseek-v4-flash}
+    thinking-enabled: ${LLM_THINKING_ENABLED:false}
+    reasoning-effort: ${LLM_REASONING_EFFORT:high}
+    explain-recommendations: ${LLM_EXPLAIN_RECOMMENDATIONS:false}
