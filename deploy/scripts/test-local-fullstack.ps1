@@ -195,6 +195,36 @@ Invoke-Test -Name "Rating submit API" -Action {
     if ($resp.code -ne 0) { throw "code != 0" }
 }
 
+Invoke-Test -Name "User rating list API returns editable ratings" -Action {
+    $url = "http://127.0.0.1:8080/api/rating/user?userId=$UserId"
+    $resp = Invoke-RestMethod -Uri $url -Method Get -TimeoutSec 10
+    if ($resp.code -ne 0) { throw "code != 0" }
+    $items = @($resp.data)
+    if ($items.Count -lt 1) { throw "rating list returned empty" }
+    $target = $items | Where-Object { $_.movieId -eq $MovieId } | Select-Object -First 1
+    if ($null -eq $target) { throw "submitted movie rating not found" }
+    if ([string]::IsNullOrWhiteSpace($target.title)) { throw "rating movie title missing" }
+    if ($null -eq $target.score) { throw "rating score missing" }
+}
+
+Invoke-Test -Name "Rating boundary validation rejects invalid scores" -Action {
+    foreach ($invalidScore in @(0.25, 5.5, 3.3)) {
+        $body = @{
+            userId  = $UserId
+            movieId = $MovieId
+            score   = $invalidScore
+        } | ConvertTo-Json
+        try {
+            $null = Invoke-RestMethod -Uri "http://127.0.0.1:8080/api/rating/submit" -Method Post -ContentType "application/json" -Body $body -TimeoutSec 10
+            throw "invalid score accepted: $invalidScore"
+        } catch {
+            if ($_.Exception.Message -like "invalid score accepted:*") {
+                throw
+            }
+        }
+    }
+}
+
 Invoke-Test -Name "Recommend API after rating submit" -Action {
     $url = "http://127.0.0.1:8080/api/recommend/movie?userId=$UserId&topN=$TopN"
     $resp = Invoke-RestMethod -Uri $url -Method Get -TimeoutSec 20
@@ -202,6 +232,13 @@ Invoke-Test -Name "Recommend API after rating submit" -Action {
 }
 
 if (-not $SkipLlmCheck) {
+    Invoke-Test -Name "LLM status API" -Action {
+        $resp = Invoke-RestMethod -Uri "http://127.0.0.1:8080/api/llm/status" -Method Get -TimeoutSec 10
+        if ($resp.code -ne 0) { throw "code != 0" }
+        if ([string]::IsNullOrWhiteSpace($resp.provider)) { throw "provider missing" }
+        if ([string]::IsNullOrWhiteSpace($resp.model)) { throw "model missing" }
+    }
+
     Invoke-Test -Name "LLM query API" -Action {
         $body = @{
             userId    = $UserId

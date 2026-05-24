@@ -21,10 +21,10 @@ MovieLens CSV
   -> MySQL movie_recommender
   -> Python FastAPI 算法服务
   -> Spring Boot 后端
-  -> Vue 前端：用户登录、电影浏览、推荐展示、评分提交、LLM 问答
+  -> Vue 前端：登录用户、浏览电影、提交/修改评分、查看推荐、进行 LLM 问答
 ```
 
-算法服务采用方案 B：直接读取 MySQL `ratings` 表进行推荐计算。后端根据算法返回的 `movieId` 查询 MySQL `movies` 表，补全 `title` 和 `genres`。
+算法服务采用方案 B：直接读取 MySQL `ratings` 表进行推荐计算。推荐结果是确定性排序：同一用户、同一批评分数据和同一推荐数量下，结果会保持稳定；提交新评分后，系统会重新计算该用户推荐。
 
 ## 环境准备
 
@@ -48,6 +48,7 @@ MYSQL_PASSWORD=你的MySQL密码
 ALGORITHM_SERVICE_URL=http://127.0.0.1:8000
 
 LLM_ENABLED=false
+LLM_PROVIDER=deepseek
 LLM_BASE_URL=https://api.deepseek.com/v1
 LLM_MODEL=deepseek-chat
 LLM_API_KEY=change_me
@@ -123,17 +124,19 @@ http://127.0.0.1:5173/
 /api -> http://127.0.0.1:8080
 ```
 
-因此页面中直接请求 `/api/...`，避免浏览器跨域问题。
-
 ## 前端当前功能
 
 - 用户注册和登录。
 - 自动保存当前用户，不需要手动输入 `userId`。
 - 查看个性化推荐列表。
-- 搜索电影或按页浏览电影库。
+- 搜索电影、分页浏览电影库、跳转指定页码。
 - 选择电影后提交评分。
-- 提交评分后刷新推荐结果。
+- 查看“我的评分”列表，并修改已评分电影。
+- 用户评分范围为 `0.5` 到 `5.0`，步长为 `0.5`。
+- 推荐结果里的 `score` 是算法排序分，不等同于用户评分满分 5 分。
+- 提交评分后，系统会根据最新偏好重新计算推荐。
 - 通过 LLM 问答入口询问推荐理由或观影建议。
+- 前端会显示 DeepSeek 当前状态：已启用或离线模式。
 - 未配置 LLM 密钥时使用离线降级回答，推荐主链路仍可运行。
 
 ## 手动测试
@@ -142,12 +145,6 @@ http://127.0.0.1:5173/
 
 ```powershell
 curl.exe http://127.0.0.1:8000/api/python/health
-```
-
-期望：
-
-```json
-{"status":"ok","ratingCount":100836}
 ```
 
 后端推荐接口：
@@ -164,6 +161,12 @@ curl.exe "http://127.0.0.1:8080/api/movie/page?keyword=Matrix&page=1&pageSize=12
 
 LLM 问答接口建议用 PowerShell：
 
+先查看 DeepSeek 配置状态：
+
+```powershell
+curl.exe "http://127.0.0.1:8080/api/llm/status"
+```
+
 ```powershell
 $body = @{
   userId = 1
@@ -177,7 +180,7 @@ Invoke-RestMethod `
   -Body $body
 ```
 
-提交评分建议用 PowerShell：
+提交评分：
 
 ```powershell
 $body = @{
@@ -192,6 +195,17 @@ Invoke-RestMethod `
   -ContentType "application/json" `
   -Body $body
 ```
+
+查询当前用户评分：
+
+```powershell
+curl.exe "http://127.0.0.1:8080/api/rating/user?userId=1"
+```
+
+评分边界说明：
+
+- 合法：`0.5`、`1.0`、`3.5`、`5.0`
+- 非法：`0.25`、`0`、`3.3`、`5.5`
 
 ## 一键测试
 
@@ -208,14 +222,38 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy\scripts\test-local-
 - 用户注册和登录接口。
 - 电影搜索和分页接口。
 - 评分提交接口。
+- 我的评分列表接口。
+- 非法评分边界会被拒绝。
 - 提交评分后推荐接口仍可用。
+- DeepSeek/LLM 状态接口。
 - LLM 问答接口。
 
 期望：
 
 ```text
-Total: 10, Passed: 10, Failed: 0
+Total: 13, Passed: 13, Failed: 0
 ```
+
+## 启用 DeepSeek
+
+在 `backend/.env` 中修改：
+
+```env
+LLM_ENABLED=true
+LLM_PROVIDER=deepseek
+LLM_BASE_URL=https://api.deepseek.com/v1
+LLM_MODEL=deepseek-chat
+LLM_API_KEY=你的DeepSeek API Key
+```
+
+然后重启后端：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy\scripts\stop-local-fullstack.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy\scripts\start-local-fullstack.ps1
+```
+
+不要把真实 `LLM_API_KEY` 提交到 GitHub。
 
 ## 注意事项
 

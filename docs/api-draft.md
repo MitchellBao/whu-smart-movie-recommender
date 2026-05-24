@@ -32,20 +32,6 @@ Content-Type: application/json
 }
 ```
 
-返回示例：
-
-```json
-{
-  "code": 0,
-  "data": {
-    "userId": 611,
-    "username": "demo",
-    "age": 20,
-    "gender": "male"
-  }
-}
-```
-
 ### 2.2 用户登录
 
 ```http
@@ -64,15 +50,7 @@ Content-Type: application/json
 
 返回结构与注册接口一致。前端保存返回的 `userId`，后续推荐和评分都使用该用户编号。
 
-### 2.3 搜索电影
-
-```http
-GET /api/movie/search?keyword=Matrix&limit=12
-```
-
-该接口返回简单列表，主要用于兼容旧版测试脚本。
-
-### 2.4 分页浏览电影
+### 2.3 分页浏览电影
 
 ```http
 GET /api/movie/page?keyword=Matrix&page=1&pageSize=12
@@ -100,7 +78,7 @@ GET /api/movie/page?keyword=Matrix&page=1&pageSize=12
 }
 ```
 
-### 2.5 获取推荐电影
+### 2.4 获取推荐电影
 
 ```http
 GET /api/recommend/movie?userId=1&topN=5
@@ -123,7 +101,14 @@ GET /api/recommend/movie?userId=1&topN=5
 }
 ```
 
-### 2.6 提交用户评分
+说明：
+
+- `score` 是算法排序分，用于比较推荐优先级。
+- `score` 不等同于用户评分满分 5 分。
+- 当前推荐是确定性排序，同一用户、同一批评分数据和同一 `topN` 下结果会保持稳定。
+- 用户提交新评分后，系统会重新计算该用户推荐。
+
+### 2.5 提交用户评分
 
 ```http
 POST /api/rating/submit
@@ -140,13 +125,76 @@ Content-Type: application/json
 }
 ```
 
+评分规则：
+
+- 最低分：`0.5`
+- 最高分：`5.0`
+- 步长：`0.5`
+- 非法示例：`0.25`、`0`、`3.3`、`5.5`
+
 职责：
 
 - 保存用户评分到 `ratings` 表。
-- 清理或刷新该用户的推荐缓存。
+- 如果同一用户已经评价过同一部电影，则更新旧评分，不新增重复当前评分。
+- 刷新该用户的推荐缓存。
 - 支持前端提交评分后重新获取推荐结果。
 
-### 2.7 LLM 推荐问答
+### 2.6 查询用户评分列表
+
+```http
+GET /api/rating/user?userId=1
+```
+
+返回示例：
+
+```json
+{
+  "code": 0,
+  "data": [
+    {
+      "ratingId": 123,
+      "movieId": 2571,
+      "title": "Matrix, The (1999)",
+      "genres": "Action|Sci-Fi|Thriller",
+      "score": 4.5,
+      "timestamp": 1779417600
+    }
+  ]
+}
+```
+
+职责：
+
+- 查询当前用户已经评分的电影。
+- 返回电影标题、类型、评分和时间戳。
+- 支持前端“我的评分”模块展示和修改回填。
+
+### 2.7 LLM 状态
+
+```http
+GET /api/llm/status
+```
+
+返回示例：
+
+```json
+{
+  "code": 0,
+  "enabled": true,
+  "configured": true,
+  "provider": "deepseek",
+  "model": "deepseek-chat",
+  "baseUrl": "https://api.deepseek.com/v1"
+}
+```
+
+说明：
+
+- `enabled` 表示是否开启 LLM 调用。
+- `configured` 表示是否已配置 API Key。
+- 前端根据该接口显示“DeepSeek 已启用”或“DeepSeek 离线模式”。
+
+### 2.8 LLM 推荐问答
 
 ```http
 POST /api/llm/query
@@ -162,21 +210,11 @@ Content-Type: application/json
 }
 ```
 
-返回示例：
-
-```json
-{
-  "code": 0,
-  "responseText": "可以优先考虑推荐列表中科幻类型更明显的影片。",
-  "relatedMovies": []
-}
-```
-
 职责：
 
 - 接收用户自然语言查询。
 - 获取当前用户相关推荐结果作为上下文。
-- 调用 LLM 客户端生成回答。
+- 调用 DeepSeek OpenAI-compatible API 生成回答。
 - 未启用 LLM 密钥时返回离线降级文案。
 
 ## 3. 后端调用算法服务接口
@@ -216,7 +254,7 @@ Content-Type: application/json
 
 - 从 MySQL `ratings` 表读取 MovieLens 评分数据。
 - 根据用户 ID 和推荐数量计算推荐结果。
-- 返回推荐电影编号、预测得分和算法侧推荐说明。
+- 返回推荐电影编号、算法排序分和算法侧推荐说明。
 
 ## 4. 当前前端联调状态
 
@@ -224,8 +262,10 @@ Content-Type: application/json
 
 - 通过 `/api/user/register` 和 `/api/user/login` 获取当前用户 ID。
 - 通过浏览器 `localStorage` 记住当前用户。
-- 通过 `/api/movie/page` 分页浏览和搜索电影，避免用户手动记忆 `movieId`。
+- 通过 `/api/movie/page` 分页浏览、搜索电影和跳转指定页码。
 - 通过 `/api/recommend/movie` 获取推荐列表。
-- 展示 `title`、`genres`、`score`、`reason`。
-- 通过 `/api/rating/submit` 提交评分并自动刷新推荐。
+- 区分“用户评分”和“推荐排序分”。
+- 通过 `/api/rating/submit` 提交评分并自动更新推荐。
+- 通过 `/api/rating/user` 查看已评分电影，并支持回填修改评分。
+- 通过 `/api/llm/status` 显示 DeepSeek 启用状态。
 - 通过 `/api/llm/query` 进行推荐问答，未配置 LLM 密钥时使用离线降级回答。

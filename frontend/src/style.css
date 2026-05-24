@@ -236,7 +236,8 @@ h3 {
 
 .recommend-panel,
 .rating-panel,
-.llm-panel {
+.llm-panel,
+.my-ratings {
   padding: 18px;
 }
 
@@ -252,6 +253,26 @@ h3 {
   color: var(--muted);
   font-size: 13px;
   font-weight: 700;
+}
+
+.llm-status {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface-muted);
+  color: var(--muted);
+  padding: 5px 9px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.llm-status.active {
+  border-color: rgba(15, 118, 110, 0.28);
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
+
+.compact-heading {
+  margin-top: 18px;
 }
 
 .notice,
@@ -330,7 +351,8 @@ h3 {
 
 .movie-search,
 .rating-form,
-.llm-form {
+.llm-form,
+.jump-form {
   display: grid;
   gap: 12px;
 }
@@ -353,6 +375,12 @@ h3 {
   font-size: 13px;
   font-weight: 700;
   text-align: center;
+}
+
+.jump-form {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  margin-bottom: 12px;
 }
 
 .movie-browser {
@@ -391,10 +419,62 @@ h3 {
 }
 
 .browse-item span,
-.selected-movie {
+.selected-movie,
+.section-note,
+.rating-help,
+.rating-item span {
   color: var(--muted);
   font-size: 12px;
   line-height: 1.4;
+}
+
+.section-note {
+  margin-top: 4px;
+}
+
+.rating-help {
+  border-radius: 6px;
+  background: var(--surface-muted);
+  padding: 10px;
+}
+
+.my-ratings {
+  border-top: 1px solid var(--border);
+  margin-top: 18px;
+  padding: 18px 0 0;
+}
+
+.rating-list {
+  display: grid;
+  gap: 8px;
+}
+
+.rating-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 46px auto;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #fff;
+  padding: 10px;
+}
+
+.rating-item strong,
+.rating-item span {
+  display: block;
+}
+
+.rating-item strong {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.rating-score {
+  color: var(--accent-strong);
+  font-size: 18px;
+  font-weight: 800;
+  text-align: right;
 }
 
 .hint {
@@ -407,6 +487,10 @@ h3 {
 .llm-form {
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: end;
+}
+
+.llm-note {
+  margin-bottom: 12px;
 }
 
 .llm-answer {
@@ -445,7 +529,8 @@ h3 {
   .toolbar,
   .auth-form,
   .content-grid,
-  .llm-form {
+  .llm-form,
+  .jump-form {
     grid-template-columns: 1fr;
   }
 

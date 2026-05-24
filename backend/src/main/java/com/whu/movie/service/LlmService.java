@@ -1,6 +1,7 @@
 package com.whu.movie.service;
 
 import com.whu.movie.dto.LlmQueryResponse;
+import com.whu.movie.dto.LlmStatusResponse;
 import com.whu.movie.dto.RecommendationItem;
 import com.whu.movie.entity.User;
 import com.whu.movie.repository.UserRepository;
@@ -35,5 +36,9 @@ public class LlmService {
         response.setResponseText(answer);
         response.setRelatedMovies(related);
         return response;
+    }
+
+    public LlmStatusResponse status() {
+        return llmClient.status();
     }
 }

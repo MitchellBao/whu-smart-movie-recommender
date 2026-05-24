@@ -1,7 +1,7 @@
 package com.whu.movie.dto;
 
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.DecimalMax;
+import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotNull;
 
 public class RatingSubmitRequest {
@@ -13,8 +13,8 @@ public class RatingSubmitRequest {
     private Integer movieId;
 
     @NotNull
-    @Min(1)
-    @Max(5)
+    @DecimalMin("0.5")
+    @DecimalMax("5.0")
     private Float score;
 
     public Integer getUserId() {

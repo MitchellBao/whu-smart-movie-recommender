@@ -2,8 +2,10 @@ package com.whu.movie.controller;
 
 import com.whu.movie.dto.LlmQueryRequest;
 import com.whu.movie.dto.LlmQueryResponse;
+import com.whu.movie.dto.LlmStatusResponse;
 import com.whu.movie.service.LlmService;
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -22,5 +24,10 @@ public class LlmController {
     @PostMapping("/query")
     public LlmQueryResponse query(@Valid @RequestBody LlmQueryRequest request) {
         return llmService.query(request.getUserId(), request.getQueryText());
+    }
+
+    @GetMapping("/status")
+    public LlmStatusResponse status() {
+        return llmService.status();
     }
 }
