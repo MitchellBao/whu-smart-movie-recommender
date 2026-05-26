@@ -270,3 +270,46 @@ Content-Type: application/json
 - 通过 `/api/rating/user` 查看已评分电影，并支持回填修改评分。
 - 通过 `/api/llm/status` 显示 DeepSeek 启用状态。
 - 通过 `/api/llm/query` 进行推荐问答，未配置 LLM 密钥时使用离线降级回答。
+## 5. 数据可视化接口
+
+### 5.1 系统总览
+
+```http
+GET /api/stats/overview
+```
+
+返回电影总数、用户总数、评分总数和平均评分，用于数据看板顶部指标卡。
+
+### 5.2 电影类型分布
+
+```http
+GET /api/stats/genres
+```
+
+根据 `movies.genres` 拆分并统计各类型电影数量，用于展示电影库覆盖情况。
+
+### 5.3 热门电影
+
+```http
+GET /api/stats/top-rated?limit=10
+```
+
+按评分数量返回热门电影 TopN，同时返回平均评分，用于展示 MovieLens 数据集中最常被评价的电影。
+
+### 5.4 当前用户评分画像
+
+```http
+GET /api/stats/user?userId=1
+```
+
+返回当前用户评分数量、平均评分、评分分布和类型偏好，用于说明用户画像如何支撑推荐。
+
+### 5.5 当前推荐画像
+
+```http
+GET /api/stats/recommendation?userId=1
+```
+
+返回当前用户推荐缓存中的类型分布和推荐分排行，用于解释本次推荐列表的整体倾向。
+
+前端“数据看板”菜单会统一调用这些接口并使用 ECharts 渲染图表。

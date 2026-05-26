@@ -234,7 +234,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy\scripts\test-local-
 期望：
 
 ```text
-Total: 13, Passed: 13, Failed: 0
+Total: 15, Passed: 15, Failed: 0
 ```
 
 ## 启用 DeepSeek
@@ -275,3 +275,24 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy\scripts\start-local
 - `data/movielens/` 是本地数据集，不提交到仓库。
 - `import-movielens-mysql.ps1` 会重置本地 MovieLens 表和测试用户，适合开发环境，不适合正式生产环境直接使用。
 - 当前用户系统是课程 MVP 版本，密码仍是明文保存，后续正式化需要加入密码哈希、Token/session 和权限控制。
+## 数据可视化
+
+前端已经增加“数据看板”菜单，使用 ECharts 展示项目数据：
+
+- 系统总览：电影总数、用户总数、评分总数、平均评分。
+- 电影类型分布：统计 `movies.genres` 中不同类型的电影数量。
+- 热门电影 Top10：按评分数量展示 MovieLens 中最常被评价的电影。
+- 我的评分画像：展示当前登录用户的评分分布和类型偏好。
+- 推荐结果画像：展示当前用户推荐列表的类型分布和推荐分排行。
+
+对应后端接口：
+
+```text
+GET /api/stats/overview
+GET /api/stats/genres
+GET /api/stats/top-rated?limit=10
+GET /api/stats/user?userId=1
+GET /api/stats/recommendation?userId=1
+```
+
+“我的评分”已经从评分栏下方拆出为独立菜单页；电影库页面只负责搜索、浏览和提交评分，信息层级更清晰。

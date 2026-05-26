@@ -207,6 +207,27 @@ Invoke-Test -Name "User rating list API returns editable ratings" -Action {
     if ($null -eq $target.score) { throw "rating score missing" }
 }
 
+Invoke-Test -Name "Stats overview and genre APIs" -Action {
+    $overview = Invoke-RestMethod -Uri "http://127.0.0.1:8080/api/stats/overview" -Method Get -TimeoutSec 20
+    if ($overview.code -ne 0) { throw "overview code != 0" }
+    if ($overview.data.movieCount -lt 1000) { throw "movieCount too small" }
+    if ($overview.data.ratingCount -lt 1000) { throw "ratingCount too small" }
+
+    $genres = Invoke-RestMethod -Uri "http://127.0.0.1:8080/api/stats/genres" -Method Get -TimeoutSec 20
+    if ($genres.code -ne 0) { throw "genres code != 0" }
+    if (@($genres.data).Count -lt 1) { throw "genre distribution empty" }
+}
+
+Invoke-Test -Name "Stats user and recommendation profile APIs" -Action {
+    $userStats = Invoke-RestMethod -Uri "http://127.0.0.1:8080/api/stats/user?userId=$UserId" -Method Get -TimeoutSec 20
+    if ($userStats.code -ne 0) { throw "user stats code != 0" }
+    if ($null -eq $userStats.data.scoreDistribution) { throw "scoreDistribution missing" }
+
+    $recommendStats = Invoke-RestMethod -Uri "http://127.0.0.1:8080/api/stats/recommendation?userId=$UserId" -Method Get -TimeoutSec 20
+    if ($recommendStats.code -ne 0) { throw "recommendation stats code != 0" }
+    if ($null -eq $recommendStats.data.genreDistribution) { throw "recommendation genreDistribution missing" }
+}
+
 Invoke-Test -Name "Rating boundary validation rejects invalid scores" -Action {
     foreach ($invalidScore in @(0.25, 5.5, 3.3)) {
         $body = @{
