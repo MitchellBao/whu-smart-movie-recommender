@@ -33,3 +33,14 @@ CREATE TABLE IF NOT EXISTS recommendations (
     CONSTRAINT fk_rec_user FOREIGN KEY (user_id) REFERENCES users(user_id),
     CONSTRAINT fk_rec_movie FOREIGN KEY (movie_id) REFERENCES movies(movie_id)
 );
+
+CREATE TABLE IF NOT EXISTS user_movie_preferences (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    user_id INT NOT NULL,
+    movie_id INT NOT NULL,
+    status VARCHAR(20) NOT NULL,
+    updated_at BIGINT NOT NULL,
+    CONSTRAINT uk_user_movie_preference UNIQUE (user_id, movie_id),
+    CONSTRAINT fk_pref_user FOREIGN KEY (user_id) REFERENCES users(user_id),
+    CONSTRAINT fk_pref_movie FOREIGN KEY (movie_id) REFERENCES movies(movie_id)
+);

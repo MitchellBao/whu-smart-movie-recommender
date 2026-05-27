@@ -1,5 +1,6 @@
 package com.whu.movie.controller;
 
+import com.whu.movie.dto.MovieDetail;
 import com.whu.movie.dto.MovieItem;
 import com.whu.movie.dto.MoviePageResponse;
 import com.whu.movie.service.MovieService;
@@ -59,6 +60,16 @@ public class MovieController {
         Map<String, Object> result = new HashMap<>();
         result.put("code", 0);
         result.put("data", movieService.listGenres());
+        return result;
+    }
+
+    @GetMapping("/detail")
+    public Map<String, Object> detail(@RequestParam Integer movieId,
+                                      @RequestParam(required = false) Integer userId) {
+        MovieDetail detail = movieService.detail(movieId, userId);
+        Map<String, Object> result = new HashMap<>();
+        result.put("code", 0);
+        result.put("data", detail);
         return result;
     }
 }

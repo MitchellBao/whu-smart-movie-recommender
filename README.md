@@ -134,12 +134,18 @@ http://127.0.0.1:5173/
 - 查看个性化推荐列表。
 - 搜索电影、分页浏览电影库、跳转指定页码。
 - 电影库支持输入时智能候选、A-Z 首字母筛选和类型筛选。
+- 点击电影可查看详情：类型、年份、平均评分、评分人数、我的评分、评分分布和相似电影。
+- 电影详情内可直接评分，并可标记为“想看”“收藏”或“不感兴趣”。
+- 推荐结果支持“不感兴趣”反馈，标记后当前列表会移除该电影，后续推荐会过滤该电影。
+- 新增“我的画像”菜单，展示评分数量、平均评分、类型偏好、最近评分和显式偏好列表。
 - 选择电影后提交评分。
-- 查看“我的评分”列表，并修改已评分电影。
+- 查看“我的评分”列表，支持统计摘要、排序筛选、页内快速改分和删除评分。
 - 用户评分范围为 `0.5` 到 `5.0`，步长为 `0.5`。
 - 推荐结果里的 `score` 是算法排序分，不等同于用户评分满分 5 分。
 - 提交评分后会立即保存；推荐结果和 DeepSeek 推荐理由在后台异步刷新，旧推荐会先保留展示。
-- 通过 LLM 问答入口询问推荐理由或观影建议。
+- 推荐结果会展示结构化推荐依据，并保留 DeepSeek 生成的自然语言推荐总结。
+- 推荐结果会展示可信度标签，例如类型匹配、历史评分充分、高口碑、LLM 总结和算法预测。
+- 通过 LLM 问答入口询问推荐理由或观影建议，支持问题模板、上下文说明和本次问答历史。
 - 前端会显示 DeepSeek 当前状态：已启用或离线模式。
 - 未配置 LLM 密钥时使用离线降级回答，推荐主链路仍可运行。
 
@@ -169,6 +175,30 @@ curl.exe "http://127.0.0.1:8080/api/movie/page?keyword=Matrix&page=1&pageSize=12
 curl.exe "http://127.0.0.1:8080/api/movie/suggest?keyword=Matrix&limit=5"
 curl.exe "http://127.0.0.1:8080/api/movie/genres"
 curl.exe "http://127.0.0.1:8080/api/movie/page?initial=A&genre=Comedy&page=1&pageSize=12"
+```
+
+电影详情接口：
+
+```powershell
+curl.exe "http://127.0.0.1:8080/api/movie/detail?movieId=2571&userId=1"
+```
+
+标记想看/收藏/不感兴趣：
+
+```powershell
+$body = @{
+  userId = 1
+  movieId = 2571
+  status = "WANT"
+} | ConvertTo-Json
+
+Invoke-RestMethod `
+  -Uri "http://127.0.0.1:8080/api/movie/preference" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body $body
+
+curl.exe "http://127.0.0.1:8080/api/movie/preference?userId=1"
 ```
 
 LLM 问答接口建议用 PowerShell：
@@ -214,6 +244,12 @@ Invoke-RestMethod `
 curl.exe "http://127.0.0.1:8080/api/rating/user?userId=1"
 ```
 
+删除当前用户某部电影评分：
+
+```powershell
+curl.exe -X DELETE "http://127.0.0.1:8080/api/rating?userId=1&movieId=1"
+```
+
 后台推荐刷新：
 
 ```powershell
@@ -240,8 +276,11 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy\scripts\test-local-
 - 多个用户都能稳定返回推荐。
 - 用户注册和登录接口。
 - 电影搜索和分页接口。
+- 电影详情、评分分布和相似电影接口。
+- 想看/收藏/不感兴趣显式反馈接口。
 - 评分提交接口。
 - 我的评分列表接口。
+- 评分删除接口。
 - 非法评分边界会被拒绝。
 - 提交评分后推荐接口仍可用。
 - DeepSeek/LLM 状态接口。
@@ -250,7 +289,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy\scripts\test-local-
 期望：
 
 ```text
-Total: 15, Passed: 15, Failed: 0
+Total: 18, Passed: 18, Failed: 0
 ```
 
 ## 启用 DeepSeek

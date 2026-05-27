@@ -9,4 +9,8 @@ public interface RatingRepository extends JpaRepository<Rating, Integer> {
     Optional<Rating> findTopByUserIdAndMovieIdOrderByTimestampDesc(Integer userId, Integer movieId);
 
     List<Rating> findByUserIdOrderByTimestampDesc(Integer userId);
+
+    List<Rating> findByMovieId(Integer movieId);
+
+    void deleteByUserIdAndMovieId(Integer userId, Integer movieId);
 }

@@ -101,6 +101,12 @@ GET /api/recommend/movie?userId=1&topN=5
       "title": "Terminator 2: Judgment Day (1991)",
       "genres": "Action|Sci-Fi",
       "score": 7.67408,
+      "reasonPoints": [
+        "因为你喜欢的类型包括：Action / Sci-Fi",
+        "电影历史平均评分较高，约 4.12 分",
+        "算法预测推荐分为 7.67，在当前候选集中排序靠前"
+      ],
+      "reasonTags": ["类型匹配", "历史评分充分", "高口碑", "算法预测"],
       "reason": "当前为离线模式：未启用 LLM 密钥，返回默认解释。"
     }
   ]
@@ -111,6 +117,9 @@ GET /api/recommend/movie?userId=1&topN=5
 
 - `score` 是算法排序分，用于比较推荐优先级。
 - `score` 不等同于用户评分满分 5 分。
+- `reasonPoints` 是结构化推荐依据，例如用户偏好类型、相似用户/历史评分、电影历史评分和算法预测分。
+- `reasonTags` 是推荐依据可信度标签，例如类型匹配、历史评分充分、高口碑、LLM 总结和算法预测。
+- `reason` 是自然语言推荐总结，可由 DeepSeek 生成，也可由算法侧默认解释兜底。
 - 当前推荐是确定性排序，同一用户、同一批评分数据和同一 `topN` 下结果会保持稳定。
 - 用户提交新评分后，系统会重新计算该用户推荐。
 
@@ -173,7 +182,19 @@ GET /api/rating/user?userId=1
 
 - 查询当前用户已经评分的电影。
 - 返回电影标题、类型、评分和时间戳。
-- 支持前端“我的评分”模块展示和修改回填。
+- 支持前端“我的评分”模块展示、排序筛选、统计摘要和页内快速改分。
+
+### 2.6.1 删除用户评分
+
+```http
+DELETE /api/rating?userId=1&movieId=2571
+```
+
+职责：
+
+- 删除当前用户对某部电影的评分。
+- 删除后前端刷新评分列表和用户画像。
+- 前端会触发推荐后台刷新，使推荐结果重新参考最新评分集合。
 
 ### 2.7 LLM 状态
 
@@ -224,7 +245,7 @@ Content-Type: application/json
 - 调用 DeepSeek OpenAI-compatible API 生成回答。
 - 未启用 LLM 密钥时返回离线降级文案。
 
-## 2.9 后台推荐刷新与电影筛选辅助接口
+## 2.9 后台推荐刷新、电影详情与显式反馈接口
 
 评分提交接口只负责快速保存评分。前端随后调用刷新接口，由后端异步重新计算推荐并生成 DeepSeek 推荐理由。刷新期间前端保留旧推荐结果，等待状态结束后再重新读取推荐列表。
 
@@ -239,7 +260,41 @@ GET /api/recommend/refresh/status?userId=1
 GET /api/movie/suggest?keyword=Matrix&limit=8
 GET /api/movie/genres
 GET /api/movie/page?keyword=&initial=A&genre=Comedy&page=1&pageSize=12
+GET /api/movie/detail?movieId=2571&userId=1
 ```
+
+电影详情接口返回类型、年份、平均评分、评分人数、当前用户是否已评分、当前用户评分、评分分布、当前用户偏好标记以及相似电影列表。相似电影会返回简短相似理由，便于前端解释“为什么相似”。
+
+显式反馈接口用于保存用户的“想看”“收藏”“不感兴趣”：
+
+```http
+POST /api/movie/preference
+Content-Type: application/json
+```
+
+```json
+{
+  "userId": 1,
+  "movieId": 2571,
+  "status": "WANT"
+}
+```
+
+`status` 可取值：
+
+- `WANT`：想看
+- `FAVORITE`：收藏
+- `DISLIKE`：不感兴趣
+
+查询与取消：
+
+```http
+GET /api/movie/preference?userId=1
+GET /api/movie/preference?userId=1&status=DISLIKE
+DELETE /api/movie/preference?userId=1&movieId=2571
+```
+
+推荐结果中的“不感兴趣”会写入该接口。后端读取推荐缓存时会过滤当前用户已标记为 `DISLIKE` 的电影，前端也会立即从当前推荐列表中移除该电影。
 
 ## 3. 后端调用算法服务接口
 
@@ -288,12 +343,15 @@ Content-Type: application/json
 - 通过浏览器 `localStorage` 记住当前用户。
 - 通过 `/api/movie/page` 分页浏览、搜索电影、跳转指定页码，并支持首字母和类型筛选。
 - 通过 `/api/movie/suggest` 和 `/api/movie/genres` 支持电影候选和类型筛选。
+- 通过 `/api/movie/detail` 查看电影评分分布、相似电影和当前用户偏好状态。
+- 通过 `/api/movie/preference` 保存想看、收藏和不感兴趣。
 - 通过 `/api/recommend/movie` 获取推荐列表。
 - 区分“用户评分”和“推荐排序分”。
 - 通过 `/api/rating/submit` 快速保存评分，再通过 `/api/recommend/refresh` 后台异步更新推荐。
 - 通过 `/api/rating/user` 查看已评分电影，并支持回填修改评分。
+- 通过 `DELETE /api/rating` 删除评分，支持用户撤销历史评分。
 - 通过 `/api/llm/status` 显示 DeepSeek 启用状态。
-- 通过 `/api/llm/query` 进行推荐问答，未配置 LLM 密钥时使用离线降级回答。
+- 通过 `/api/llm/query` 进行推荐问答，前端提供问题模板、上下文说明和本次问答历史；未配置 LLM 密钥时使用离线降级回答。
 ## 5. 数据可视化接口
 
 ### 5.1 系统总览

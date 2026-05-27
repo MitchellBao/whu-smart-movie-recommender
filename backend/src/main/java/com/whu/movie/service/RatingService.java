@@ -10,6 +10,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import jakarta.transaction.Transactional;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -24,6 +25,7 @@ public class RatingService {
         this.movieRepository = movieRepository;
     }
 
+    @Transactional
     public void submitRating(RatingSubmitRequest request) {
         validateRatingScore(request.getScore());
 
@@ -60,6 +62,11 @@ public class RatingService {
             items.add(item);
         }
         return items;
+    }
+
+    @Transactional
+    public void deleteRating(Integer userId, Integer movieId) {
+        ratingRepository.deleteByUserIdAndMovieId(userId, movieId);
     }
 
     private void validateRatingScore(Float score) {

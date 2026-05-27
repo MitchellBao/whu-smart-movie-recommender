@@ -83,6 +83,12 @@ function Assert-RecommendResponse {
         if ([string]::IsNullOrWhiteSpace($item.reason)) {
             throw "reason missing for movieId=$($item.movieId)"
         }
+        if ($null -eq $item.reasonPoints) {
+            throw "reasonPoints missing for movieId=$($item.movieId)"
+        }
+        if ($null -eq $item.reasonTags) {
+            throw "reasonTags missing for movieId=$($item.movieId)"
+        }
     }
 }
 
@@ -201,6 +207,35 @@ Invoke-Test -Name "Movie suggest and filter APIs" -Action {
     if ($filterResp.data.totalItems -lt 1) { throw "filter returned empty" }
 }
 
+Invoke-Test -Name "Movie detail API returns rating summary and similar movies" -Action {
+    $url = "http://127.0.0.1:8080/api/movie/detail?movieId=$MovieId&userId=$UserId"
+    $resp = Invoke-RestMethod -Uri $url -Method Get -TimeoutSec 10
+    if ($resp.code -ne 0) { throw "code != 0" }
+    if ($null -eq $resp.data.movieId) { throw "movieId missing" }
+    if ([string]::IsNullOrWhiteSpace($resp.data.title)) { throw "title missing" }
+    if ($null -eq $resp.data.averageScore) { throw "averageScore missing" }
+    if ($null -eq $resp.data.ratingCount) { throw "ratingCount missing" }
+    if ($null -eq $resp.data.ratedByCurrentUser) { throw "ratedByCurrentUser missing" }
+    if ($null -eq $resp.data.scoreDistribution) { throw "scoreDistribution missing" }
+    if ($null -eq $resp.data.similarMovies) { throw "similarMovies missing" }
+}
+
+Invoke-Test -Name "Movie preference APIs support explicit feedback" -Action {
+    $body = @{
+        userId  = $UserId
+        movieId = $MovieId
+        status  = "WANT"
+    } | ConvertTo-Json
+    $setResp = Invoke-RestMethod -Uri "http://127.0.0.1:8080/api/movie/preference" -Method Post -ContentType "application/json" -Body $body -TimeoutSec 10
+    if ($setResp.code -ne 0) { throw "set preference code != 0" }
+    if ($setResp.data.status -ne "WANT") { throw "preference status mismatch" }
+
+    $listResp = Invoke-RestMethod -Uri "http://127.0.0.1:8080/api/movie/preference?userId=$UserId" -Method Get -TimeoutSec 10
+    if ($listResp.code -ne 0) { throw "list preference code != 0" }
+    $target = @($listResp.data) | Where-Object { $_.movieId -eq $MovieId } | Select-Object -First 1
+    if ($null -eq $target) { throw "preference item not found" }
+}
+
 Invoke-Test -Name "Rating submit API" -Action {
     $body = @{
         userId  = $UserId
@@ -277,6 +312,24 @@ Invoke-Test -Name "Recommend API after rating submit" -Action {
     $url = "http://127.0.0.1:8080/api/recommend/movie?userId=$UserId&topN=$TopN"
     $resp = Invoke-RestMethod -Uri $url -Method Get -TimeoutSec 20
     Assert-RecommendResponse -Response $resp -ExpectedTopN $TopN
+}
+
+Invoke-Test -Name "Rating delete API removes and restores rating" -Action {
+    $deleteUrl = "http://127.0.0.1:8080/api/rating?userId=$UserId&movieId=$MovieId"
+    $deleteResp = Invoke-RestMethod -Uri $deleteUrl -Method Delete -TimeoutSec 10
+    if ($deleteResp.code -ne 0) { throw "delete code != 0" }
+
+    $listResp = Invoke-RestMethod -Uri "http://127.0.0.1:8080/api/rating/user?userId=$UserId" -Method Get -TimeoutSec 10
+    $deleted = @($listResp.data) | Where-Object { $_.movieId -eq $MovieId } | Select-Object -First 1
+    if ($null -ne $deleted) { throw "deleted rating still exists" }
+
+    $body = @{
+        userId  = $UserId
+        movieId = $MovieId
+        score   = $Score
+    } | ConvertTo-Json
+    $restoreResp = Invoke-RestMethod -Uri "http://127.0.0.1:8080/api/rating/submit" -Method Post -ContentType "application/json" -Body $body -TimeoutSec 30
+    if ($restoreResp.code -ne 0) { throw "restore code != 0" }
 }
 
 if (-not $SkipLlmCheck) {

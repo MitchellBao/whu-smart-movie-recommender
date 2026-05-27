@@ -1,11 +1,15 @@
 package com.whu.movie.dto;
 
+import java.util.List;
+
 public class RecommendationItem {
     private Integer movieId;
     private String title;
     private String genres;
     private Float score;
     private String reason;
+    private List<String> reasonPoints;
+    private List<String> reasonTags;
 
     public Integer getMovieId() {
         return movieId;
@@ -45,5 +49,21 @@ public class RecommendationItem {
 
     public void setReason(String reason) {
         this.reason = reason;
+    }
+
+    public List<String> getReasonPoints() {
+        return reasonPoints;
+    }
+
+    public void setReasonPoints(List<String> reasonPoints) {
+        this.reasonPoints = reasonPoints;
+    }
+
+    public List<String> getReasonTags() {
+        return reasonTags;
+    }
+
+    public void setReasonTags(List<String> reasonTags) {
+        this.reasonTags = reasonTags;
     }
 }
