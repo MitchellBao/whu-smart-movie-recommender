@@ -1,11 +1,11 @@
 <script setup>
 import { computed, nextTick, onMounted, reactive, ref, watch } from 'vue'
-import { BarChart } from 'echarts/charts'
-import { GridComponent, TitleComponent, TooltipComponent } from 'echarts/components'
+import { BarChart, LineChart, PieChart, ScatterChart } from 'echarts/charts'
+import { GridComponent, LegendComponent, TitleComponent, TooltipComponent } from 'echarts/components'
 import { getInstanceByDom, init, use } from 'echarts/core'
 import { CanvasRenderer } from 'echarts/renderers'
 
-use([BarChart, GridComponent, TitleComponent, TooltipComponent, CanvasRenderer])
+use([BarChart, LineChart, PieChart, ScatterChart, GridComponent, LegendComponent, TitleComponent, TooltipComponent, CanvasRenderer])
 
 const API_BASE = '/api'
 const savedUser = JSON.parse(localStorage.getItem('movieUser') || 'null')
@@ -22,10 +22,14 @@ const state = reactive({
   submitting: false,
   llmLoading: false,
   statsLoading: false,
+  recommendationRefreshing: false,
+  suggestionLoading: false,
   error: '',
   message: '',
   recommendations: [],
   movies: [],
+  movieSuggestions: [],
+  movieGenres: [],
   myRatings: [],
   llmStatus: {
     enabled: false,
@@ -51,6 +55,8 @@ const authForm = reactive({
 
 const movieQuery = reactive({
   keyword: '',
+  initial: 'all',
+  genre: 'all',
   page: 1,
   jumpPage: 1,
   pageSize: 12,
@@ -84,6 +90,8 @@ const navItems = [
   { key: 'dashboard', label: '数据看板' },
   { key: 'llm', label: '智能问答' },
 ]
+
+const alphabetFilters = ['all', ...'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('')]
 
 const currentUserId = computed(() => state.user?.userId || null)
 const hasRecommendations = computed(() => state.recommendations.length > 0)
@@ -161,7 +169,10 @@ async function submitAuth() {
     saveUser(payload.data)
     authForm.password = ''
     state.message = state.authMode === 'register' ? '注册成功，已进入系统' : '登录成功'
-    await Promise.all([fetchRecommendations(), fetchMyRatings(), fetchDashboard()])
+    state.message = '评分已保存，正在后台更新推荐结果和 DeepSeek 推荐理由'
+    state.message = '评分已保存，正在后台更新推荐结果和 DeepSeek 推荐理由'
+    await Promise.all([fetchMyRatings(), fetchUserStats()])
+    await triggerRecommendationRefresh()
   } catch (error) {
     setError(error)
   } finally {
@@ -194,6 +205,35 @@ async function fetchRecommendations() {
     setError(error)
   } finally {
     state.loading = false
+  }
+}
+
+async function triggerRecommendationRefresh() {
+  if (!currentUserId.value) return
+  state.recommendationRefreshing = true
+  const params = new URLSearchParams({
+    userId: String(currentUserId.value),
+    topN: String(state.topN),
+  })
+  await requestJson(`${API_BASE}/recommend/refresh?${params}`, { method: 'POST' })
+  window.setTimeout(pollRecommendationRefresh, 1200)
+}
+
+async function pollRecommendationRefresh() {
+  if (!currentUserId.value) return
+  const params = new URLSearchParams({ userId: String(currentUserId.value) })
+  try {
+    const payload = await requestJson(`${API_BASE}/recommend/refresh/status?${params}`)
+    if (payload.refreshing) {
+      window.setTimeout(pollRecommendationRefresh, 1200)
+      return
+    }
+    state.recommendationRefreshing = false
+    await Promise.all([fetchRecommendations(), fetchRecommendationStats()])
+    state.message = '推荐结果和推荐理由已更新'
+  } catch (error) {
+    state.recommendationRefreshing = false
+    setError(error)
   }
 }
 
@@ -243,6 +283,8 @@ async function searchMovies(resetPage = true) {
   try {
     const params = new URLSearchParams({
       keyword: movieQuery.keyword,
+      initial: movieQuery.initial,
+      genre: movieQuery.genre,
       page: String(movieQuery.page),
       pageSize: String(movieQuery.pageSize),
     })
@@ -260,6 +302,60 @@ async function searchMovies(resetPage = true) {
   } finally {
     state.movieLoading = false
   }
+}
+
+async function fetchMovieSuggestions() {
+  const keyword = movieQuery.keyword.trim()
+  if (!keyword) {
+    state.movieSuggestions = []
+    return
+  }
+  state.suggestionLoading = true
+  try {
+    const params = new URLSearchParams({
+      keyword,
+      limit: '8',
+    })
+    const payload = await requestJson(`${API_BASE}/movie/suggest?${params}`)
+    state.movieSuggestions = Array.isArray(payload.data) ? payload.data : []
+  } catch {
+    state.movieSuggestions = []
+  } finally {
+    state.suggestionLoading = false
+  }
+}
+
+async function fetchMovieGenres() {
+  try {
+    const payload = await requestJson(`${API_BASE}/movie/genres`)
+    state.movieGenres = Array.isArray(payload.data) ? payload.data : []
+  } catch {
+    state.movieGenres = []
+  }
+}
+
+async function applySuggestion(movie) {
+  movieQuery.keyword = movie.title
+  state.movieSuggestions = []
+  await searchMovies(true)
+}
+
+async function applyInitialFilter(initial) {
+  movieQuery.initial = initial
+  await searchMovies(true)
+}
+
+async function applyGenreFilter(genre) {
+  movieQuery.genre = genre
+  await searchMovies(true)
+}
+
+async function resetMovieFilters() {
+  movieQuery.keyword = ''
+  movieQuery.initial = 'all'
+  movieQuery.genre = 'all'
+  state.movieSuggestions = []
+  await searchMovies(true)
 }
 
 async function changeMoviePage(delta) {
@@ -326,7 +422,8 @@ async function submitRating() {
       }),
     })
     state.message = '评分已保存，推荐已根据最新偏好重新计算'
-    await Promise.all([fetchRecommendations(), fetchMyRatings(), fetchDashboard()])
+    await Promise.all([fetchMyRatings(), fetchUserStats()])
+    await triggerRecommendationRefresh()
   } catch (error) {
     setError(error)
   } finally {
@@ -421,9 +518,9 @@ async function renderCharts() {
   const userScores = state.stats.userProfile.scoreDistribution || []
   const userGenres = state.stats.userProfile.genrePreference || []
   const recGenres = state.stats.recommendationProfile.genreDistribution || []
-  const recScores = state.stats.recommendationProfile.scoreRanking || []
+  const recScores = state.recommendations || []
 
-  setChart(genreChartRef.value, barOption('电影类型分布', genreData.map(item => item.name), genreData.map(item => item.value), '#0f766e'))
+  setChart(genreChartRef.value, doughnutOption('电影类型分布', genreData, '#0f766e'))
   setChart(topMovieChartRef.value, horizontalBarOption(
     '热门电影 Top10',
     topRated.map(item => item.title),
@@ -431,19 +528,100 @@ async function renderCharts() {
     '#2563eb',
   ))
   setChart(scoreChartRef.value, barOption('我的评分分布', userScores.map(item => item.name), userScores.map(item => item.value), '#d97706'))
-  setChart(userGenreChartRef.value, barOption('我的类型偏好', userGenres.map(item => item.name), userGenres.map(item => item.value), '#7c3aed'))
-  setChart(recGenreChartRef.value, barOption('推荐类型分布', recGenres.map(item => item.name), recGenres.map(item => item.value), '#dc2626'))
-  setChart(recScoreChartRef.value, horizontalBarOption(
-    '推荐分 Top10',
+  setChart(userGenreChartRef.value, roseOption('我的类型偏好', userGenres, '#7c3aed'))
+  setChart(recGenreChartRef.value, pieOption('推荐类型分布', recGenres, '#dc2626'))
+  setChart(recScoreChartRef.value, scatterOption(
+    `推荐分分布（当前 ${recScores.length} 条）`,
     recScores.map(item => item.title),
-    recScores.map(item => Number(item.score || 0).toFixed(2)),
+    recScores.map(item => Number(item.score || 0)),
     '#0891b2',
   ))
 }
 
+function baseTitle(title) {
+  return { text: title, left: 8, top: 4, textStyle: { fontSize: 14, fontWeight: 700 } }
+}
+
+function chartPalette(color) {
+  return [color, '#2563eb', '#d97706', '#7c3aed', '#dc2626', '#0891b2', '#65a30d', '#be185d', '#475569', '#9333ea']
+}
+
+function doughnutOption(title, data, color) {
+  return {
+    title: baseTitle(title),
+    color: chartPalette(color),
+    tooltip: { trigger: 'item' },
+    legend: { type: 'scroll', bottom: 8, left: 12, right: 12 },
+    series: [{
+      type: 'pie',
+      radius: ['42%', '68%'],
+      center: ['50%', '48%'],
+      data,
+      label: { formatter: '{b}' },
+    }],
+  }
+}
+
+function pieOption(title, data, color) {
+  return {
+    title: baseTitle(title),
+    color: chartPalette(color),
+    tooltip: { trigger: 'item' },
+    legend: { type: 'scroll', bottom: 8, left: 12, right: 12 },
+    series: [{
+      type: 'pie',
+      radius: '66%',
+      center: ['50%', '48%'],
+      data,
+      label: { formatter: '{b}' },
+    }],
+  }
+}
+
+function roseOption(title, data, color) {
+  return {
+    title: baseTitle(title),
+    color: chartPalette(color),
+    tooltip: { trigger: 'item' },
+    legend: { type: 'scroll', bottom: 8, left: 12, right: 12 },
+    series: [{
+      type: 'pie',
+      radius: ['18%', '68%'],
+      center: ['50%', '48%'],
+      roseType: 'area',
+      data,
+      label: { formatter: '{b}' },
+    }],
+  }
+}
+
+function scatterOption(title, labels, values, color) {
+  return {
+    title: baseTitle(title),
+    color: [color],
+    tooltip: { trigger: 'axis' },
+    grid: { left: 48, right: 18, top: 52, bottom: 92 },
+    xAxis: {
+      type: 'category',
+      data: labels,
+      axisLabel: {
+        rotate: 35,
+        width: 86,
+        overflow: 'truncate',
+      },
+    },
+    yAxis: { type: 'value', scale: true },
+    series: [{
+      type: 'scatter',
+      symbolSize: value => Math.max(10, Math.min(26, Number(value) * 4)),
+      data: values,
+    }],
+  }
+}
+
 function barOption(title, labels, values, color) {
   return {
-    title: { text: title, left: 8, top: 4, textStyle: { fontSize: 14, fontWeight: 700 } },
+    title: baseTitle(title),
     color: [color],
     tooltip: { trigger: 'axis' },
     grid: { left: 42, right: 18, top: 52, bottom: 42 },
@@ -455,7 +633,7 @@ function barOption(title, labels, values, color) {
 
 function horizontalBarOption(title, labels, values, color) {
   return {
-    title: { text: title, left: 8, top: 4, textStyle: { fontSize: 14, fontWeight: 700 } },
+    title: baseTitle(title),
     color: [color],
     tooltip: { trigger: 'axis' },
     grid: { left: 132, right: 24, top: 52, bottom: 24 },
@@ -503,6 +681,7 @@ window.addEventListener('resize', () => {
 
 onMounted(async () => {
   await fetchLlmStatus()
+  await fetchMovieGenres()
   await searchMovies()
   await fetchOverviewStats()
   if (currentUserId.value) {
@@ -597,6 +776,13 @@ onMounted(async () => {
         </button>
         <p class="toolbar-note">同一用户、同一批评分数据和同一推荐数量下，推荐排序会保持稳定；提交新评分后会重新计算。</p>
       </section>
+      <div v-if="state.recommendationRefreshing" class="refresh-banner">
+        <span class="spinner"></span>
+        <div>
+          <strong>正在更新推荐结果和 DeepSeek 理由</strong>
+          <p>旧推荐会继续显示，后台完成后会自动替换为最新推荐。</p>
+        </div>
+      </div>
       <div v-if="state.loading" class="empty">正在读取推荐结果...</div>
       <div v-else-if="!hasRecommendations" class="empty">登录后可查看个性化推荐</div>
       <ol v-else class="movie-list">
@@ -626,7 +812,7 @@ onMounted(async () => {
       <form class="movie-search" @submit.prevent="searchMovies(true)">
         <label>
           <span>搜索电影或类型</span>
-          <input v-model="movieQuery.keyword" type="search" placeholder="例如 Matrix / Sci-Fi" />
+          <input v-model="movieQuery.keyword" type="search" placeholder="例如 Matrix / Sci-Fi" @input="fetchMovieSuggestions" />
         </label>
         <label>
           <span>每页</span>
@@ -641,6 +827,60 @@ onMounted(async () => {
           {{ state.movieLoading ? '搜索中' : '搜索' }}
         </button>
       </form>
+
+      <div v-if="state.movieSuggestions.length" class="suggestion-list">
+        <button
+          v-for="movie in state.movieSuggestions"
+          :key="movie.movieId"
+          type="button"
+          @click="applySuggestion(movie)"
+        >
+          <strong>{{ movie.title }}</strong>
+          <span>{{ movie.genres }}</span>
+        </button>
+      </div>
+
+      <section class="filter-panel">
+        <div>
+          <span class="filter-title">首字母</span>
+          <div class="chip-row">
+            <button
+              v-for="letter in alphabetFilters"
+              :key="letter"
+              type="button"
+              class="filter-chip"
+              :class="{ selected: movieQuery.initial === letter }"
+              @click="applyInitialFilter(letter)"
+            >
+              {{ letter === 'all' ? '全部' : letter }}
+            </button>
+          </div>
+        </div>
+        <div>
+          <span class="filter-title">类型</span>
+          <div class="chip-row genre-row">
+            <button
+              type="button"
+              class="filter-chip"
+              :class="{ selected: movieQuery.genre === 'all' }"
+              @click="applyGenreFilter('all')"
+            >
+              全部
+            </button>
+            <button
+              v-for="genre in state.movieGenres"
+              :key="genre"
+              type="button"
+              class="filter-chip"
+              :class="{ selected: movieQuery.genre === genre }"
+              @click="applyGenreFilter(genre)"
+            >
+              {{ genre }}
+            </button>
+          </div>
+        </div>
+        <button type="button" class="ghost-button" @click="resetMovieFilters">重置筛选</button>
+      </section>
 
       <div class="pager">
         <button type="button" class="icon-button" :disabled="!canGoPrev || state.movieLoading" @click="changeMoviePage(-1)">上一页</button>

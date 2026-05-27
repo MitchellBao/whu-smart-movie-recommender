@@ -17,14 +17,11 @@ public class RatingService {
 
     private final RatingRepository ratingRepository;
     private final MovieRepository movieRepository;
-    private final RecommendationService recommendationService;
 
     public RatingService(RatingRepository ratingRepository,
-                         MovieRepository movieRepository,
-                         RecommendationService recommendationService) {
+                         MovieRepository movieRepository) {
         this.ratingRepository = ratingRepository;
         this.movieRepository = movieRepository;
-        this.recommendationService = recommendationService;
     }
 
     public void submitRating(RatingSubmitRequest request) {
@@ -40,9 +37,6 @@ public class RatingService {
         rating.setScore(request.getScore());
         rating.setTimestamp(System.currentTimeMillis() / 1000);
         ratingRepository.save(rating);
-
-        // 评分变化后同步触发推荐更新。
-        recommendationService.refreshRecommendation(request.getUserId(), 10);
     }
 
     public List<UserRatingItem> listUserRatings(Integer userId) {

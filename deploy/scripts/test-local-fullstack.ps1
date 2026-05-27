@@ -185,6 +185,22 @@ Invoke-Test -Name "Movie page API returns pagination metadata" -Action {
     if ($resp.data.totalItems -lt 1) { throw "totalItems too small" }
 }
 
+Invoke-Test -Name "Movie suggest and filter APIs" -Action {
+    $suggestUrl = "http://127.0.0.1:8080/api/movie/suggest?keyword=$([uri]::EscapeDataString($MovieKeyword))&limit=3"
+    $suggestResp = Invoke-RestMethod -Uri $suggestUrl -Method Get -TimeoutSec 10
+    if ($suggestResp.code -ne 0) { throw "suggest code != 0" }
+    if (@($suggestResp.data).Count -lt 1) { throw "suggest returned empty" }
+
+    $genresResp = Invoke-RestMethod -Uri "http://127.0.0.1:8080/api/movie/genres" -Method Get -TimeoutSec 10
+    if ($genresResp.code -ne 0) { throw "genres code != 0" }
+    if (-not (@($genresResp.data) -contains "Comedy")) { throw "Comedy genre missing" }
+
+    $filterUrl = "http://127.0.0.1:8080/api/movie/page?initial=A&genre=Comedy&page=1&pageSize=5"
+    $filterResp = Invoke-RestMethod -Uri $filterUrl -Method Get -TimeoutSec 10
+    if ($filterResp.code -ne 0) { throw "filter code != 0" }
+    if ($filterResp.data.totalItems -lt 1) { throw "filter returned empty" }
+}
+
 Invoke-Test -Name "Rating submit API" -Action {
     $body = @{
         userId  = $UserId
@@ -193,6 +209,17 @@ Invoke-Test -Name "Rating submit API" -Action {
     } | ConvertTo-Json
     $resp = Invoke-RestMethod -Uri "http://127.0.0.1:8080/api/rating/submit" -Method Post -ContentType "application/json" -Body $body -TimeoutSec 90
     if ($resp.code -ne 0) { throw "code != 0" }
+}
+
+Invoke-Test -Name "Async recommendation refresh APIs" -Action {
+    $refreshUrl = "http://127.0.0.1:8080/api/recommend/refresh?userId=$UserId&topN=$TopN"
+    $refreshResp = Invoke-RestMethod -Uri $refreshUrl -Method Post -TimeoutSec 10
+    if ($refreshResp.code -ne 0) { throw "refresh code != 0" }
+
+    $statusUrl = "http://127.0.0.1:8080/api/recommend/refresh/status?userId=$UserId"
+    $statusResp = Invoke-RestMethod -Uri $statusUrl -Method Get -TimeoutSec 10
+    if ($statusResp.code -ne 0) { throw "status code != 0" }
+    if ($null -eq $statusResp.refreshing) { throw "refreshing flag missing" }
 }
 
 Invoke-Test -Name "User rating list API returns editable ratings" -Action {

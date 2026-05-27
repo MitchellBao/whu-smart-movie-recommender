@@ -56,6 +56,12 @@ Content-Type: application/json
 GET /api/movie/page?keyword=Matrix&page=1&pageSize=12
 ```
 
+支持按首字母和类型筛选：
+
+```http
+GET /api/movie/page?keyword=&initial=A&genre=Comedy&page=1&pageSize=12
+```
+
 返回示例：
 
 ```json
@@ -218,6 +224,23 @@ Content-Type: application/json
 - 调用 DeepSeek OpenAI-compatible API 生成回答。
 - 未启用 LLM 密钥时返回离线降级文案。
 
+## 2.9 后台推荐刷新与电影筛选辅助接口
+
+评分提交接口只负责快速保存评分。前端随后调用刷新接口，由后端异步重新计算推荐并生成 DeepSeek 推荐理由。刷新期间前端保留旧推荐结果，等待状态结束后再重新读取推荐列表。
+
+```http
+POST /api/recommend/refresh?userId=1&topN=5
+GET /api/recommend/refresh/status?userId=1
+```
+
+电影库支持搜索候选、A-Z 首字母筛选和类型筛选：
+
+```http
+GET /api/movie/suggest?keyword=Matrix&limit=8
+GET /api/movie/genres
+GET /api/movie/page?keyword=&initial=A&genre=Comedy&page=1&pageSize=12
+```
+
 ## 3. 后端调用算法服务接口
 
 ### 3.1 算法服务健康检查
@@ -263,10 +286,11 @@ Content-Type: application/json
 
 - 通过 `/api/user/register` 和 `/api/user/login` 获取当前用户 ID。
 - 通过浏览器 `localStorage` 记住当前用户。
-- 通过 `/api/movie/page` 分页浏览、搜索电影和跳转指定页码。
+- 通过 `/api/movie/page` 分页浏览、搜索电影、跳转指定页码，并支持首字母和类型筛选。
+- 通过 `/api/movie/suggest` 和 `/api/movie/genres` 支持电影候选和类型筛选。
 - 通过 `/api/recommend/movie` 获取推荐列表。
 - 区分“用户评分”和“推荐排序分”。
-- 通过 `/api/rating/submit` 提交评分并自动更新推荐。
+- 通过 `/api/rating/submit` 快速保存评分，再通过 `/api/recommend/refresh` 后台异步更新推荐。
 - 通过 `/api/rating/user` 查看已评分电影，并支持回填修改评分。
 - 通过 `/api/llm/status` 显示 DeepSeek 启用状态。
 - 通过 `/api/llm/query` 进行推荐问答，未配置 LLM 密钥时使用离线降级回答。

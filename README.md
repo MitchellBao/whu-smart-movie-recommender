@@ -133,11 +133,12 @@ http://127.0.0.1:5173/
 - 自动保存当前用户，不需要手动输入 `userId`。
 - 查看个性化推荐列表。
 - 搜索电影、分页浏览电影库、跳转指定页码。
+- 电影库支持输入时智能候选、A-Z 首字母筛选和类型筛选。
 - 选择电影后提交评分。
 - 查看“我的评分”列表，并修改已评分电影。
 - 用户评分范围为 `0.5` 到 `5.0`，步长为 `0.5`。
 - 推荐结果里的 `score` 是算法排序分，不等同于用户评分满分 5 分。
-- 提交评分后，系统会根据最新偏好重新计算推荐。
+- 提交评分后会立即保存；推荐结果和 DeepSeek 推荐理由在后台异步刷新，旧推荐会先保留展示。
 - 通过 LLM 问答入口询问推荐理由或观影建议。
 - 前端会显示 DeepSeek 当前状态：已启用或离线模式。
 - 未配置 LLM 密钥时使用离线降级回答，推荐主链路仍可运行。
@@ -160,6 +161,14 @@ curl.exe "http://127.0.0.1:8080/api/recommend/movie?userId=1&topN=5"
 
 ```powershell
 curl.exe "http://127.0.0.1:8080/api/movie/page?keyword=Matrix&page=1&pageSize=12"
+```
+
+电影候选和筛选接口：
+
+```powershell
+curl.exe "http://127.0.0.1:8080/api/movie/suggest?keyword=Matrix&limit=5"
+curl.exe "http://127.0.0.1:8080/api/movie/genres"
+curl.exe "http://127.0.0.1:8080/api/movie/page?initial=A&genre=Comedy&page=1&pageSize=12"
 ```
 
 LLM 问答接口建议用 PowerShell：
@@ -203,6 +212,13 @@ Invoke-RestMethod `
 
 ```powershell
 curl.exe "http://127.0.0.1:8080/api/rating/user?userId=1"
+```
+
+后台推荐刷新：
+
+```powershell
+curl.exe -X POST "http://127.0.0.1:8080/api/recommend/refresh?userId=1&topN=5"
+curl.exe "http://127.0.0.1:8080/api/recommend/refresh/status?userId=1"
 ```
 
 评分边界说明：

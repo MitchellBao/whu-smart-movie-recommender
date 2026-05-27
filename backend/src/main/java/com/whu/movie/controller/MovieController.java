@@ -33,12 +33,32 @@ public class MovieController {
 
     @GetMapping("/page")
     public Map<String, Object> page(@RequestParam(defaultValue = "") String keyword,
+                                    @RequestParam(defaultValue = "all") String initial,
+                                    @RequestParam(defaultValue = "all") String genre,
                                     @RequestParam(defaultValue = "1") Integer page,
                                     @RequestParam(defaultValue = "12") Integer pageSize) {
-        MoviePageResponse movies = movieService.searchPage(keyword, page, pageSize);
+        MoviePageResponse movies = movieService.searchPage(keyword, initial, genre, page, pageSize);
         Map<String, Object> result = new HashMap<>();
         result.put("code", 0);
         result.put("data", movies);
+        return result;
+    }
+
+    @GetMapping("/suggest")
+    public Map<String, Object> suggest(@RequestParam(defaultValue = "") String keyword,
+                                       @RequestParam(defaultValue = "8") Integer limit) {
+        List<MovieItem> movies = movieService.suggest(keyword, limit);
+        Map<String, Object> result = new HashMap<>();
+        result.put("code", 0);
+        result.put("data", movies);
+        return result;
+    }
+
+    @GetMapping("/genres")
+    public Map<String, Object> genres() {
+        Map<String, Object> result = new HashMap<>();
+        result.put("code", 0);
+        result.put("data", movieService.listGenres());
         return result;
     }
 }
