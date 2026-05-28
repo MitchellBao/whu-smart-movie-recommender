@@ -67,11 +67,16 @@ public class LlmClient {
         return chatCompletion(prompt);
     }
 
-    public String answerUserQuery(String username, String queryText, List<String> candidateMovieTitles) {
+    public String answerUserQuery(String username, String queryText, String userContext) {
         String prompt = "你是一个电影推荐问答助手。用户是" + username
                 + "，用户提问：" + queryText
-                + "。可参考候选电影：" + String.join("、", candidateMovieTitles)
-                + "。请给出简洁中文建议，不超过120字；如果候选电影不足以回答，请说明依据有限。";
+                + "。\n以下是系统已经读取到的真实上下文，请只基于这些数据回答，不要说用户未提供评分：\n"
+                + userContext
+                + "\n回答要求："
+                + "1. 如果用户问“第一名”，必须指当前推荐列表第1名；"
+                + "2. 必须参考用户评分、想看、收藏、不感兴趣中的可用信息；"
+                + "3. 不要推荐用户已标记“不感兴趣”的电影；"
+                + "4. 请给出简洁中文建议，不超过160字。";
         return chatCompletion(prompt);
     }
 

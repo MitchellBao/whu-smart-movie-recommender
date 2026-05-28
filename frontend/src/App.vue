@@ -174,7 +174,7 @@ const selectedMovieLabel = computed(() => {
 })
 const canGoPrev = computed(() => movieQuery.page > 1)
 const canGoNext = computed(() => movieQuery.totalPages === 0 || movieQuery.page < movieQuery.totalPages)
-const shouldShowMovieDetail = computed(() => state.selectedMovieDetail && ['recommend', 'movies', 'profile'].includes(state.activeView))
+const shouldShowMovieDetail = computed(() => state.selectedMovieDetail && ['recommend', 'movies'].includes(state.activeView))
 
 function clearFeedback() {
   state.error = ''
@@ -248,6 +248,9 @@ function logout() {
 
 function switchView(view) {
   state.activeView = view
+  if (!['recommend', 'movies'].includes(view)) {
+    state.selectedMovieDetail = null
+  }
   clearFeedback()
 }
 
@@ -626,6 +629,7 @@ function editRating(rating) {
   ratingForm.movieTitle = rating.title || `电影 #${rating.movieId}`
   ratingForm.score = Number(rating.score)
   state.activeView = 'movies'
+  state.selectedMovieDetail = null
   state.message = `正在修改《${ratingForm.movieTitle}》的评分`
 }
 
@@ -687,6 +691,7 @@ async function askLlm() {
       body: JSON.stringify({
         userId: Number(currentUserId.value),
         queryText: llmForm.queryText.trim(),
+        topN: Number(state.topN),
       }),
     })
     llmForm.responseText = payload.responseText || '当前没有返回回答'
@@ -713,6 +718,16 @@ function viewRelatedMovie(movie) {
   if (!movie?.movieId) return
   state.activeView = 'recommend'
   fetchMovieDetail(movie.movieId)
+}
+
+async function prepareLlmContext() {
+  if (!currentUserId.value) return
+  await Promise.all([
+    fetchRecommendations(),
+    fetchMyRatings(),
+    fetchPreferences(),
+    fetchUserStats(),
+  ])
 }
 
 async function fetchOverviewStats() {
@@ -917,6 +932,9 @@ watch(
     }
     if (view === 'profile') {
       await Promise.all([fetchMyRatings(), fetchPreferences(), fetchUserStats()])
+    }
+    if (view === 'llm') {
+      await prepareLlmContext()
     }
     if (view === 'dashboard') {
       await fetchDashboard()
@@ -1394,7 +1412,7 @@ onMounted(async () => {
                 v-for="rating in state.myRatings.slice(0, 6)"
                 :key="rating.movieId"
                 type="button"
-                @click="fetchMovieDetail(rating.movieId)"
+                @click="viewRelatedMovie(rating)"
               >
                 <span>{{ rating.title }}</span>
                 <strong>{{ Number(rating.score).toFixed(1) }}</strong>
@@ -1409,7 +1427,7 @@ onMounted(async () => {
                 v-for="item in state.preferences.slice(0, 8)"
                 :key="`${item.status}-${item.movieId}`"
                 type="button"
-                @click="fetchMovieDetail(item.movieId)"
+                @click="viewRelatedMovie(item)"
               >
                 <span>{{ item.title }}</span>
                 <strong>{{ preferenceLabel(item.status) }}</strong>

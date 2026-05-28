@@ -14,6 +14,15 @@ whu-smart-movie-recommender/
 └── README.md
 ```
 
+常用文档：
+
+- [系统设计说明](docs/architecture.md)
+- [API 接口设计草案](docs/api-draft.md)
+- [手动测试与答辩演示流程](docs/manual-test-guide.md)
+- [开发、部署与排错说明](docs/development-and-ops.md)
+- [质量改进与后续路线](docs/quality-and-roadmap.md)
+- [答辩讲稿](docs/defense-speech.md)
+
 ## 当前主链路
 
 ```text
@@ -213,6 +222,7 @@ curl.exe "http://127.0.0.1:8080/api/llm/status"
 $body = @{
   userId = 1
   queryText = "推荐一部烧脑科幻片"
+  topN = 5
 } | ConvertTo-Json
 
 Invoke-RestMethod `
@@ -330,6 +340,17 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\deploy\scripts\start-local
 - `data/movielens/` 是本地数据集，不提交到仓库。
 - `import-movielens-mysql.ps1` 会重置本地 MovieLens 表和测试用户，适合开发环境，不适合正式生产环境直接使用。
 - 当前用户系统是课程 MVP 版本，密码仍是明文保存，后续正式化需要加入密码哈希、Token/session 和权限控制。
+
+## 工程改进方向
+
+当前版本以课程演示和完整链路为目标，后续可从以下方向继续工程化：
+
+- 用户安全：密码哈希、Token/session、接口权限控制。
+- 数据库治理：迁移脚本、索引优化、备份恢复流程。
+- 推荐评估：增加 RMSE、MAE、Precision@K、Recall@K 等离线评估脚本。
+- 代码结构：前端 `App.vue` 可继续拆成推荐、电影库、评分、画像、问答等组件。
+- 部署可靠性：服务器环境变量、日志轮转、端口占用排查和一键恢复说明。
+
 ## 数据可视化
 
 前端已经增加“数据看板”菜单，使用 ECharts 展示项目数据：

@@ -11,6 +11,8 @@ public class LlmQueryRequest {
     @NotBlank
     private String queryText;
 
+    private Integer topN;
+
     public Integer getUserId() {
         return userId;
     }
@@ -25,5 +27,13 @@ public class LlmQueryRequest {
 
     public void setQueryText(String queryText) {
         this.queryText = queryText;
+    }
+
+    public Integer getTopN() {
+        return topN;
+    }
+
+    public void setTopN(Integer topN) {
+        this.topN = topN;
     }
 }

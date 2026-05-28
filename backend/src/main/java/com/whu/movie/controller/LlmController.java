@@ -23,7 +23,7 @@ public class LlmController {
 
     @PostMapping("/query")
     public LlmQueryResponse query(@Valid @RequestBody LlmQueryRequest request) {
-        return llmService.query(request.getUserId(), request.getQueryText());
+        return llmService.query(request.getUserId(), request.getQueryText(), request.getTopN());
     }
 
     @GetMapping("/status")
