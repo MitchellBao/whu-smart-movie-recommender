@@ -188,8 +188,8 @@ MovieListItem.vue
 - `README.md` 能说明怎么安装、启动、测试。
 - `docs/architecture.md` 能说明系统设计。
 - `docs/api-draft.md` 能说明主要接口。
-- `docs/defense-speech.md` 能支撑现场讲解和演示。
 - `docs/development-and-ops.md` 能说明常见排错。
+- 本地 `docs/defense-speech.md` 能支撑现场讲解和演示，该文件属于个人答辩材料，不提交到仓库。
 - 全栈测试结果为 `18/18 passed`。
 
 只要这些都满足，项目就具备比较完整的课程交付状态。

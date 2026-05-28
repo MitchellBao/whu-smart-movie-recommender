@@ -28,6 +28,9 @@ frontend/dist/
 logs/
 data/movielens/
 
+# Local defense notes
+docs/defense-speech.md
+
 # Env
 .env
 backend/.env
