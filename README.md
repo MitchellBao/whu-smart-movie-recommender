@@ -18,10 +18,9 @@ whu-smart-movie-recommender/
 
 - [系统设计说明](docs/architecture.md)
 - [API 接口设计草案](docs/api-draft.md)
-- [手动测试与答辩演示流程](docs/manual-test-guide.md)
 - [开发、部署与排错说明](docs/development-and-ops.md)
 - [质量改进与后续路线](docs/quality-and-roadmap.md)
-- [答辩讲稿](docs/defense-speech.md)
+- [答辩讲稿与演示流程](docs/defense-speech.md)
 
 ## 当前主链路
 
